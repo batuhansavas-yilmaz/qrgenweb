@@ -52,6 +52,8 @@
     torch: false,
     facingMode: 'environment',
     focusTimer: null,
+    focusWarned: false,
+    focusRequest: 0,
     result: null,
     detected: false
   };
@@ -527,6 +529,8 @@
     }
     state.cameraStarting = true;
     state.detected = false;
+    state.focusWarned = false;
+    state.focusRequest += 1;
     setLoading(true);
     hideCameraError();
     try {
@@ -702,7 +706,7 @@
     if (navigator.vibrate) navigator.vibrate(60);
   }
 
-  function handleCameraTap(event) {
+  async function handleCameraTap(event) {
     if (!state.scanning) return;
     if (event.target.closest('button') || event.target.closest('input')) return;
     const stage = $('#cameraStage');
@@ -710,33 +714,62 @@
     const x = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
     const y = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
     const ring = $('#focusRing');
+    const label = ring.querySelector('span');
     ring.style.left = (event.clientX - rect.left) + 'px';
     ring.style.top = (event.clientY - rect.top) + 'px';
     ring.hidden = false;
+    if (label) label.textContent = 'Odaklanıyor…';
     ring.classList.remove('focusing');
     void ring.offsetWidth;
     ring.classList.add('focusing');
     clearTimeout(state.focusTimer);
-    state.focusTimer = setTimeout(() => { ring.hidden = true; }, 1100);
-    applyFocus(x, y);
+    const requestId = ++state.focusRequest;
+    const applied = await applyFocus(x, y);
+    if (requestId !== state.focusRequest) return;
+    if (label) label.textContent = applied ? 'Odaklandı' : 'Odak desteklenmiyor';
+    if (!applied && !state.focusWarned) {
+      state.focusWarned = true;
+      showToast('Bu cihazda dokunarak odak desteklenmiyor; kamera otomatik odak kullanıyor.');
+    }
+    clearTimeout(state.focusTimer);
+    state.focusTimer = setTimeout(() => { ring.hidden = true; }, 1300);
   }
 
   async function applyFocus(x, y) {
     const track = state.videoTrack;
-    if (!track) return;
+    if (!track) return false;
     const capabilities = track.getCapabilities ? track.getCapabilities() : {};
-    const advanced = [];
-    if (capabilities.pointsOfInterest) advanced.push({ pointsOfInterest: [{ x, y }] });
-    if (capabilities.focusMode) {
-      if (capabilities.focusMode.indexOf('single-shot') !== -1) advanced.push({ focusMode: 'single-shot' });
-      else if (capabilities.focusMode.indexOf('continuous') !== -1) advanced.push({ focusMode: 'continuous' });
+    let applied = false;
+
+    if (capabilities.pointsOfInterest) {
+      try {
+        await track.applyConstraints({ advanced: [{ pointsOfInterest: [{ x, y }] }] });
+        applied = true;
+      } catch (error) {
+        // Try single-shot below.
+      }
     }
-    if (!advanced.length) return;
-    try {
-      await track.applyConstraints({ advanced });
-    } catch (error) {
-      // Hardware focus is optional.
+
+    let singleShotApplied = false;
+    if (capabilities.focusMode && capabilities.focusMode.indexOf('single-shot') !== -1) {
+      try {
+        await track.applyConstraints({ advanced: [{ focusMode: 'single-shot' }] });
+        applied = true;
+        singleShotApplied = true;
+      } catch (error) {
+        // Hardware focus is optional.
+      }
     }
+
+    if (singleShotApplied) {
+      setTimeout(() => {
+        const currentTrack = state.videoTrack;
+        if (!currentTrack) return;
+        currentTrack.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
+      }, 1400);
+    }
+
+    return applied;
   }
 
   async function toggleTorch() {

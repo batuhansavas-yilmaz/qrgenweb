@@ -10,7 +10,7 @@ QR kod oluşturan ve tarayan, tamamen tarayıcıda çalışan statik web uygulam
 - **Sade QR:** Logo seçilmezse QR logosuz ve sade üretilir.
 - **İndirme:** PNG ve SVG; panoya kopyalama ve Web Share desteği.
 - **Tarama:** Canlı kamera, dosyadan görsel, sürükle-bırak ve panodan yapıştırma.
-- **Kamera kontrolleri:** Flaş, kamera çevirme, destek varsa zoom; görüntüye dokununca odak halkası görünür ve kısa süre sonra kaybolur.
+- **Kamera kontrolleri:** Flaş, kamera çevirme, destek varsa zoom; görüntüye dokununca odak halkası görünür ve kısa süre sonra kaybolur. Dokunarak odak yalnızca destekleyen tarayıcı/cihazlarda uygulanır; desteklenmiyorsa arayüz “Odak desteklenmiyor” der ve kamera otomatik odakta kalır.
 - **Sonuç işlemleri:** Site açma, arama, SMS, WhatsApp mesajı, e-posta ve Wi-Fi bilgilerini kopyalama.
 - **Rehbere kaydet:** Telefon içeren sonuçlarda `.vcf` kişi dosyası indirir; dosyayı açınca rehber uygulamasına aktarılır.
 - **Hazır örnekler:** Site, telefon ve site + telefon içeren üç QR masaüstünde görünür. Butonlar yalnızca görsel örnektir; tıklanamaz. Mobilde bu bölüm tamamen gizlenir.
