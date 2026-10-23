@@ -22,7 +22,7 @@
     email: 'E-posta',
     sms: 'SMS',
     wifi: 'Wi-Fi',
-    vcard: 'Kişi',
+    vcard: 'Kartvizit',
     mixed: 'Site + Numara',
     text: 'Metin',
     geo: 'Konum'
@@ -141,12 +141,27 @@
     return typeof window.QRCodeStyling === 'function';
   }
 
+  function toQrData(value) {
+    const text = String(value == null ? '' : value);
+    if (!/[^\x00-\x7F]/.test(text)) return text;
+    if (typeof TextEncoder === 'function') {
+      const bytes = new TextEncoder().encode(text);
+      let binary = '';
+      const chunk = 0x8000;
+      for (let index = 0; index < bytes.length; index += chunk) {
+        binary += String.fromCharCode.apply(null, bytes.subarray(index, index + chunk));
+      }
+      return binary;
+    }
+    return unescape(encodeURIComponent(text));
+  }
+
   function qrOptions(data, size, fg, bg, logo) {
     const options = {
       type: 'canvas',
       width: size,
       height: size,
-      data,
+      data: toQrData(data),
       margin: Math.max(8, Math.round(size * 0.03)),
       qrOptions: { errorCorrectionLevel: 'H' },
       dotsOptions: { color: fg, type: 'rounded' },
@@ -289,7 +304,7 @@
       return {
         valid: true,
         data,
-        label: 'vCard',
+        label: 'Kartvizit',
         summary: [name || 'QrGen Kişisi', phone ? formatPhone(phone) : '', url ? 'site' : ''].filter(Boolean).join(' · ')
       };
     }
@@ -440,9 +455,9 @@
 
   function buildVCardData(contact) {
     const lines = ['BEGIN:VCARD', 'VERSION:3.0'];
-    if (contact.name) lines.push('FN:' + escapeVCard(contact.name));
-    if (contact.org) lines.push('ORG:' + escapeVCard(contact.org));
-    if (contact.title) lines.push('TITLE:' + escapeVCard(contact.title));
+    if (contact.name) lines.push('FN;CHARSET=UTF-8:' + escapeVCard(contact.name));
+    if (contact.org) lines.push('ORG;CHARSET=UTF-8:' + escapeVCard(contact.org));
+    if (contact.title) lines.push('TITLE;CHARSET=UTF-8:' + escapeVCard(contact.title));
     if (contact.phone) lines.push('TEL;TYPE=CELL:' + contact.phone.replace(/[^\d+]/g, ''));
     if (contact.email) lines.push('EMAIL:' + contact.email);
     if (contact.url) lines.push('URL:' + contact.url);
@@ -585,6 +600,7 @@
   function resetScanUi() {
     stopCamera();
     hideCameraError();
+    state.detected = false;
     $('#cameraPlaceholder').hidden = false;
     $('#cameraOverlay').hidden = true;
     $('#startCameraBtn').hidden = false;
@@ -755,6 +771,7 @@
       showToast('Lütfen bir görsel seçin.');
       return;
     }
+    state.detected = false;
     setLoading(true);
     try {
       let source;
@@ -943,7 +960,8 @@
   }
 
   function parseVCard(text) {
-    const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+    const normalizedText = /ENCODING=QUOTED-PRINTABLE/i.test(text) ? text.replace(/=\r?\n/g, '') : text;
+    const lines = normalizedText.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
     const unfolded = [];
     for (const line of lines) {
       if (/^[ \t]/.test(line) && unfolded.length) unfolded[unfolded.length - 1] += line.slice(1);
@@ -953,9 +971,16 @@
     for (const line of unfolded) {
       const index = line.indexOf(':');
       if (index < 0) continue;
-      const key = line.slice(0, index).split(';')[0].trim().toUpperCase();
-      const value = line.slice(index + 1).trim();
+      const header = line.slice(0, index);
+      const parts = header.split(';');
+      const key = parts.shift().trim().toUpperCase();
       if (!key) continue;
+      const params = {};
+      for (const part of parts) {
+        const equals = part.indexOf('=');
+        if (equals > 0) params[part.slice(0, equals).trim().toUpperCase()] = part.slice(equals + 1).trim();
+      }
+      const value = decodeVCardValue(line.slice(index + 1).trim(), params);
       if (!fields[key]) fields[key] = [];
       fields[key].push(value);
     }
@@ -1240,6 +1265,57 @@
       .replace(/\\;/g, ';')
       .replace(/\\\\/g, '\\')
       .trim();
+  }
+
+  function normalizeCharset(charset) {
+    const value = String(charset || 'utf-8').replace(/^"|"$/g, '').trim().toLowerCase();
+    return value || 'utf-8';
+  }
+
+  function decodeVCardValue(value, params) {
+    const encoding = String(params.ENCODING || '').toUpperCase();
+    const charset = normalizeCharset(params.CHARSET);
+    if (encoding === 'QUOTED-PRINTABLE') return decodeQuotedPrintable(value, charset);
+    if (encoding === 'B' || encoding === 'BASE64') {
+      try {
+        const binary = atob(String(value).replace(/\s+/g, ''));
+        const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+        return new TextDecoder(charset).decode(bytes);
+      } catch (error) {
+        return value;
+      }
+    }
+    return value;
+  }
+
+  function decodeQuotedPrintable(value, charset) {
+    const normalized = String(value).replace(/=\r?\n/g, '');
+    const bytes = [];
+    for (let index = 0; index < normalized.length; index += 1) {
+      const character = normalized[index];
+      if (character === '=' && /^[0-9A-Fa-f]{2}$/.test(normalized.slice(index + 1, index + 3))) {
+        bytes.push(parseInt(normalized.slice(index + 1, index + 3), 16));
+        index += 2;
+        continue;
+      }
+      const code = normalized.charCodeAt(index);
+      if (code <= 0xFF) {
+        bytes.push(code);
+      } else if (typeof TextEncoder === 'function') {
+        for (const byte of new TextEncoder().encode(character)) bytes.push(byte);
+      } else {
+        bytes.push(63);
+      }
+    }
+    try {
+      return new TextDecoder(charset).decode(new Uint8Array(bytes));
+    } catch (error) {
+      try {
+        return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
+      } catch (fallbackError) {
+        return value;
+      }
+    }
   }
 
   function escapeVCard(value) {

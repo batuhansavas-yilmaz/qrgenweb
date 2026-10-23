@@ -4,7 +4,7 @@ QR kod oluşturan ve tarayan, tamamen tarayıcıda çalışan statik web uygulam
 
 ## İşlevler
 
-- **QR oluşturma:** Metin, URL, telefon, e-posta, SMS, Wi-Fi ve vCard.
+- **QR oluşturma:** Metin, URL, telefon, e-posta, SMS, Wi-Fi ve Kartvizit (vCard).
 - **Canlı önizleme:** İçerik yazılırken QR anında güncellenir.
 - **Kişiselleştirme:** QR rengi, arka plan rengi, 512/1024/2048 px boyut ve isteğe bağlı logo.
 - **Sade QR:** Logo seçilmezse QR logosuz ve sade üretilir.
