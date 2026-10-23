@@ -190,18 +190,31 @@ summary:focus-visible {
 }
 
 .hero-card {
+  --hero-pad: 16px;
   position: relative;
   width: clamp(240px, 26vw, 330px);
+  height: auto;
   aspect-ratio: 1;
   margin: 0 auto;
-  padding: 16px;
+  padding: var(--hero-pad);
+  overflow: hidden;
   border-radius: 22px;
   background: #ffffff;
   border: 1px solid #1c1c1c;
   box-shadow: 0 24px 50px -20px rgba(20, 40, 58, .5);
 }
 
-.hero-qr { width: 100%; height: 100%; }
+.hero-card .hero-qr {
+  position: absolute;
+  inset: var(--hero-pad);
+  width: auto;
+  height: auto;
+}
+
+.hero-card .hero-qr canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
 
 .qr-target { position: relative; width: 100%; }
 
@@ -446,7 +459,6 @@ html[data-theme="dark"] .badge.green { background: rgba(47, 210, 127, .12); }
 .demo-action .ic { width: 14px; height: 14px; }
 .demo-action.primary { background: var(--btn-grad); color: #fff; border-color: transparent; }
 .demo-action.wa { color: var(--wa); background: rgba(37, 211, 102, .08); border-color: rgba(37, 211, 102, .24); }
-.demo-action.save { color: var(--primary); background: var(--primary-soft); border-color: color-mix(in srgb, var(--primary) 40%, transparent); }
 .demo-action.wide { grid-column: 1 / -1; }
 .demo-action:disabled { opacity: 1; cursor: default; pointer-events: none; }
 .demo-action:disabled:hover { transform: none; filter: none; }
@@ -727,7 +739,7 @@ html[data-theme="dark"] .badge.green { background: rgba(47, 210, 127, .12); }
     radial-gradient(320px 260px at 84% 82%, rgba(84, 173, 224, .28), transparent 62%),
     linear-gradient(145deg, #243054 0%, #111a31 48%, #070c18 100%);
   box-shadow: inset 0 0 80px rgba(2, 5, 18, .55);
-  cursor: crosshair;
+  cursor: default;
 }
 
 #scanVideo {
@@ -748,9 +760,22 @@ html[data-theme="dark"] .badge.green { background: rgba(47, 210, 127, .12); }
   padding: 24px;
   text-align: center;
   color: #fff;
+  cursor: pointer;
   background:
     radial-gradient(300px 200px at 50% 10%, rgba(106, 89, 232, .32), transparent 65%),
     linear-gradient(145deg, #1b2444, #080d1a);
+  transition: background .18s ease;
+}
+
+.camera-placeholder:hover {
+  background:
+    radial-gradient(320px 220px at 50% 10%, rgba(106, 89, 232, .4), transparent 65%),
+    linear-gradient(145deg, #202b51, #090f1f);
+}
+
+.camera-placeholder:focus-visible {
+  outline: 2px solid var(--primary-2);
+  outline-offset: -4px;
 }
 
 .placeholder-icon {
@@ -851,50 +876,6 @@ html[data-theme="dark"] .badge.green { background: rgba(47, 210, 127, .12); }
 @keyframes frameScan {
   0%, 100% { top: 12px; }
   50% { top: calc(100% - 14px); }
-}
-
-.focus-ring {
-  position: absolute;
-  z-index: 5;
-  width: 74px;
-  height: 74px;
-  transform: translate(-50%, -50%);
-  border: 1.5px solid rgba(255, 255, 255, .92);
-  border-radius: 50%;
-  pointer-events: none;
-}
-
-.focus-ring::before,
-.focus-ring::after {
-  content: '';
-  position: absolute;
-  background: rgba(255, 255, 255, .92);
-}
-
-.focus-ring::before { left: 50%; top: -5px; width: 1px; height: 9px; }
-.focus-ring::after { top: 50%; left: -5px; width: 9px; height: 1px; }
-
-.focus-ring span {
-  position: absolute;
-  left: 50%;
-  top: calc(100% + 8px);
-  transform: translateX(-50%);
-  white-space: nowrap;
-  padding: 4px 7px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, .16);
-  background: rgba(8, 13, 26, .65);
-  color: #fff;
-  font-size: 8.5px;
-  font-weight: 600;
-  backdrop-filter: blur(10px);
-}
-
-.focus-ring.focusing { animation: focusPulse .5s ease-out; }
-
-@keyframes focusPulse {
-  0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, .55); }
-  100% { box-shadow: 0 0 0 16px rgba(255, 255, 255, 0); }
 }
 
 .zoom-wrap {
@@ -1088,7 +1069,6 @@ html[data-theme="dark"] .badge.green { background: rgba(47, 210, 127, .12); }
 .quick-action:active { transform: scale(.995); }
 .quick-action.primary { color: #fff; background: var(--btn-grad); border-color: transparent; box-shadow: 0 8px 18px -10px rgba(90, 74, 216, .7); }
 .quick-action.wa { color: var(--wa); background: rgba(37, 211, 102, .07); border-color: rgba(37, 211, 102, .24); }
-.quick-action.save { color: var(--primary); background: var(--primary-soft); border-color: color-mix(in srgb, var(--primary) 40%, transparent); }
 .quick-action.wide { grid-column: 1 / -1; justify-content: center; }
 
 .qa-icon {
@@ -1105,7 +1085,6 @@ html[data-theme="dark"] .badge.green { background: rgba(47, 210, 127, .12); }
 .qa-icon .ic { width: 16px; height: 16px; }
 .quick-action.primary .qa-icon { background: rgba(255, 255, 255, .16); color: #fff; }
 .quick-action.wa .qa-icon { background: rgba(37, 211, 102, .12); color: var(--wa); }
-.quick-action.save .qa-icon { background: var(--surface); }
 
 .btn-full { width: 100%; }
 .result-page .btn-full { margin-bottom: 0; }
@@ -1264,7 +1243,7 @@ html[data-theme="dark"] .badge.green { background: rgba(47, 210, 127, .12); }
 @media (max-width: 900px) and (max-height: 780px) {
   .view { padding-top: 10px; padding-bottom: 14px; }
   .home-top { gap: 10px; }
-  .hero-card { width: min(210px, 28dvh, 68vw); padding: 11px; }
+  .hero-card { width: min(210px, 28dvh, 68vw); --hero-pad: 11px; }
   .corner { width: 24px; height: 24px; border-width: 2.5px; }
   .home-copy h2 { font-size: clamp(26px, 7.4vw, 34px); margin: 4px 0 6px; }
   .home-copy > p {
@@ -1312,7 +1291,7 @@ html[data-theme="dark"] .badge.green { background: rgba(47, 210, 127, .12); }
   .home-copy h2 { font-size: clamp(30px, 9vw, 40px); }
   .home-copy > p { font-size: 13px; }
   .home-top { gap: 18px; }
-  .hero-card { width: min(250px, 70vw); padding: 13px; }
+  .hero-card { width: min(250px, 70vw); --hero-pad: 13px; }
   .corner { width: 28px; height: 28px; }
   .demo-section { margin-top: 26px; }
   .demo-actions { grid-template-columns: 1fr 1fr; }
@@ -1331,5 +1310,5 @@ html[data-theme="dark"] .badge.green { background: rgba(47, 210, 127, .12); }
 
 @media (prefers-reduced-motion: reduce) {
   .scan-sweep, .frame-line, .spinner { animation: none; }
-  .action-btn, .demo-action, .btn-primary, .btn-soft, .quick-action, .focus-ring { transition: none; }
+  .action-btn, .demo-action, .btn-primary, .btn-soft, .quick-action { transition: none; }
 }

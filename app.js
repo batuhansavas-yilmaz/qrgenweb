@@ -51,9 +51,6 @@
     cameraStarting: false,
     torch: false,
     facingMode: 'environment',
-    focusTimer: null,
-    focusWarned: false,
-    focusRequest: 0,
     result: null,
     detected: false
   };
@@ -464,28 +461,15 @@
     return lines.join('\r\n') + '\r\n';
   }
 
-  async function saveContact(contact) {
-    if (!contact.phone && !contact.email && !contact.url) {
-      showToast('Kaydedilecek kişi bilgisi yok.');
-      return;
-    }
-    const data = buildVCardData(contact);
-    const blob = new Blob([data], { type: 'text/vcard;charset=utf-8' });
-    const file = new File([blob], 'qrgen-kisi.vcf', { type: 'text/vcard' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file], title: 'Rehbere kaydet', text: contact.name || 'QrGen kişisi' });
-        return;
-      } catch (error) {
-        if (error.name === 'AbortError') return;
-      }
-    }
-    downloadBlob(blob, 'qrgen-kisi.vcf');
-    showToast('Kişi dosyası indirildi; rehber uygulamasında açıp kaydedin.');
-  }
-
   function initScan() {
     $('#startCameraBtn').addEventListener('click', startCamera);
+    $('#cameraPlaceholder').addEventListener('click', startCamera);
+    $('#cameraPlaceholder').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        startCamera();
+      }
+    });
     $('#stopCameraBtn').addEventListener('click', () => {
       stopCamera();
       resetScanUi();
@@ -500,7 +484,6 @@
     $('#flashBtn').addEventListener('click', toggleTorch);
     $('#flipBtn').addEventListener('click', flipCamera);
     $('#zoomRange').addEventListener('input', applyZoom);
-    $('#cameraStage').addEventListener('click', handleCameraTap);
     $('#dropZone').addEventListener('click', () => $('#scanFileInput').click());
     ['dragover', 'dragenter'].forEach((name) => {
       $('#dropZone').addEventListener(name, (event) => {
@@ -529,8 +512,6 @@
     }
     state.cameraStarting = true;
     state.detected = false;
-    state.focusWarned = false;
-    state.focusRequest += 1;
     setLoading(true);
     hideCameraError();
     try {
@@ -609,7 +590,6 @@
     $('#flashBtn').hidden = true;
     $('#flipBtn').hidden = true;
     $('#zoomWrap').hidden = true;
-    $('#focusRing').hidden = true;
     $('#flashBtn').classList.remove('active');
     state.torch = false;
   }
@@ -617,7 +597,6 @@
   function resetScanUi() {
     stopCamera();
     hideCameraError();
-    $('#focusRing').hidden = true;
     $('#cameraPlaceholder').hidden = false;
     $('#cameraOverlay').hidden = true;
     $('#startCameraBtn').hidden = false;
@@ -704,72 +683,6 @@
     renderResult(parsed);
     navigate('result');
     if (navigator.vibrate) navigator.vibrate(60);
-  }
-
-  async function handleCameraTap(event) {
-    if (!state.scanning) return;
-    if (event.target.closest('button') || event.target.closest('input')) return;
-    const stage = $('#cameraStage');
-    const rect = stage.getBoundingClientRect();
-    const x = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
-    const y = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
-    const ring = $('#focusRing');
-    const label = ring.querySelector('span');
-    ring.style.left = (event.clientX - rect.left) + 'px';
-    ring.style.top = (event.clientY - rect.top) + 'px';
-    ring.hidden = false;
-    if (label) label.textContent = 'Odaklanıyor…';
-    ring.classList.remove('focusing');
-    void ring.offsetWidth;
-    ring.classList.add('focusing');
-    clearTimeout(state.focusTimer);
-    const requestId = ++state.focusRequest;
-    const applied = await applyFocus(x, y);
-    if (requestId !== state.focusRequest) return;
-    if (label) label.textContent = applied ? 'Odaklandı' : 'Odak desteklenmiyor';
-    if (!applied && !state.focusWarned) {
-      state.focusWarned = true;
-      showToast('Bu cihazda dokunarak odak desteklenmiyor; kamera otomatik odak kullanıyor.');
-    }
-    clearTimeout(state.focusTimer);
-    state.focusTimer = setTimeout(() => { ring.hidden = true; }, 1300);
-  }
-
-  async function applyFocus(x, y) {
-    const track = state.videoTrack;
-    if (!track) return false;
-    const capabilities = track.getCapabilities ? track.getCapabilities() : {};
-    let applied = false;
-
-    if (capabilities.pointsOfInterest) {
-      try {
-        await track.applyConstraints({ advanced: [{ pointsOfInterest: [{ x, y }] }] });
-        applied = true;
-      } catch (error) {
-        // Try single-shot below.
-      }
-    }
-
-    let singleShotApplied = false;
-    if (capabilities.focusMode && capabilities.focusMode.indexOf('single-shot') !== -1) {
-      try {
-        await track.applyConstraints({ advanced: [{ focusMode: 'single-shot' }] });
-        applied = true;
-        singleShotApplied = true;
-      } catch (error) {
-        // Hardware focus is optional.
-      }
-    }
-
-    if (singleShotApplied) {
-      setTimeout(() => {
-        const currentTrack = state.videoTrack;
-        if (!currentTrack) return;
-        currentTrack.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
-      }, 1400);
-    }
-
-    return applied;
   }
 
   async function toggleTorch() {
@@ -942,7 +855,6 @@
     const action = button.dataset.action;
     if (action === 'copy') await copyText(state.result ? state.result.raw : '');
     if (action === 'share') await shareText(state.result ? state.result.raw : '');
-    if (action === 'save-contact') await saveContactFromResult();
     if (action === 'rescan') {
       navigate('scan');
       setTimeout(startCamera, 150);
@@ -951,19 +863,6 @@
       const password = state.result && state.result.wifi ? state.result.wifi.password : '';
       if (password) await copyText(password);
     }
-  }
-
-  async function saveContactFromResult() {
-    const result = state.result;
-    if (!result) return;
-    await saveContact({
-      name: result.name || (result.phone ? formatPhone(result.phone) : 'QrGen Kişisi'),
-      phone: result.phone,
-      url: result.url,
-      email: result.email,
-      org: result.org,
-      title: result.title
-    });
   }
 
   async function copyText(text) {
@@ -1211,7 +1110,6 @@
           <a class="quick-action primary" href="${escapeAttr('tel:' + parsed.phone)}">${icon('phone')}<strong>Ara</strong></a>
           <a class="quick-action" href="${escapeAttr('sms:' + parsed.phone)}">${icon('message')}<strong>SMS at</strong></a>
           <a class="quick-action wa wide" href="${escapeAttr(waLink(parsed.phone))}" target="_blank" rel="noopener noreferrer">${iconWhatsApp()}<strong>WhatsApp</strong></a>
-          <button class="quick-action save wide" type="button" data-action="save-contact">${icon('user-plus')}<strong>Rehbere kaydet</strong></button>
         </div>
       `);
     }
