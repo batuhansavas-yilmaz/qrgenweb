@@ -9,7 +9,7 @@ QR kod oluşturan ve tarayan, tamamen tarayıcıda çalışan statik web uygulam
 - **Kişiselleştirme:** QR rengi, arka plan rengi, 512/1024/2048 px boyut ve isteğe bağlı logo.
 - **Sade QR:** Logo seçilmezse QR logosuz ve sade üretilir.
 - **İndirme:** PNG ve SVG; panoya kopyalama ve Web Share desteği.
-- **Tarama:** Canlı kamera, dosyadan görsel, sürükle-bırak ve panodan yapıştırma.
+- **Tarama:** Canlı kamera, galeriden/dosyadan görsel, masaüstünde sürükle-bırak ve panodan yapıştırma. Destekleyen tarayıcılarda yerel `BarcodeDetector`, diğerlerinde jsQR kullanılır.
 - **Kamera kontrolleri:** Flaş, kamera çevirme, destek varsa zoom.
 - **Sonuç işlemleri:** Site açma, arama, SMS, WhatsApp mesajı, e-posta ve Wi-Fi bilgilerini kopyalama.
 - **Hazır örnekler:** Site, telefon ve site + telefon içeren üç QR masaüstünde görünür. Butonlar yalnızca görsel örnektir; tıklanamaz. Mobilde bu bölüm tamamen gizlenir.

@@ -51,6 +51,9 @@
     cameraStarting: false,
     torch: false,
     facingMode: 'environment',
+    scanTick: 0,
+    barcodeDetector: null,
+    barcodeDetectorChecked: false,
     result: null,
     detected: false
   };
@@ -64,6 +67,7 @@
     initNavigation();
     initQrCodes();
     initGenerate();
+    setupBarcodeDetector();
     initScan();
     initResult();
     routeInitial();
@@ -131,7 +135,6 @@
     state.demoQrs.site = createStaticQr('demoSiteQr', DEMO_SITE, 512);
     state.demoQrs.phone = createStaticQr('demoPhoneQr', 'tel:' + DEMO_PHONE, 512);
     state.demoQrs.both = createStaticQr('demoBothQr', DEMO_VCARD, 512);
-    renderPreviewQr(DEMO_SITE, 1024, '#0b1020', '#ffffff', null);
   }
 
   function hasQrEngine() {
@@ -209,31 +212,7 @@
     $$('.field-group').forEach((group) => {
       group.hidden = group.dataset.group !== type;
     });
-    fillTypeDefaults(type);
     updatePreview();
-  }
-
-  function fillTypeDefaults(type) {
-    const setIfEmpty = (selector, value) => {
-      const field = $(selector);
-      if (field && !field.value) field.value = value;
-    };
-    if (type === 'text') setIfEmpty('#genText', 'Merhaba! QrGen ile oluşturuldu.');
-    if (type === 'phone') setIfEmpty('#genPhone', '+90 532 123 45 67');
-    if (type === 'email') setIfEmpty('#genEmail', 'merhaba@example.com');
-    if (type === 'sms') {
-      setIfEmpty('#genSmsPhone', '+90 532 123 45 67');
-      setIfEmpty('#genSmsBody', 'Merhaba!');
-    }
-    if (type === 'wifi') {
-      setIfEmpty('#genWifiSsid', 'QrGen Wi-Fi');
-      setIfEmpty('#genWifiPassword', 'qrgen1234');
-    }
-    if (type === 'vcard') {
-      setIfEmpty('#genVName', DEMO_NAME);
-      setIfEmpty('#genVPhone', '+90 532 123 45 67');
-      setIfEmpty('#genVUrl', DEMO_SITE);
-    }
   }
 
   function buildContent() {
@@ -317,6 +296,14 @@
     return { valid: false, error: 'İçerik türü seçin.' };
   }
 
+  function isActiveFormEmpty() {
+    const group = document.querySelector('.field-group:not([hidden])');
+    if (!group) return true;
+    const fields = group.querySelectorAll('input:not([type="checkbox"]):not([type="radio"]), textarea');
+    if (!fields.length) return true;
+    return Array.from(fields).every((field) => !field.value.trim());
+  }
+
   function updatePreview() {
     const errorEl = $('#previewError');
     errorEl.hidden = true;
@@ -332,8 +319,10 @@
       placeholder.hidden = false;
       $('#previewSummary').textContent = 'İçerik bekleniyor.';
       actionButtons.forEach((button) => { button.disabled = true; });
-      errorEl.textContent = built.error || 'İçerik girin.';
-      errorEl.hidden = false;
+      if (!isActiveFormEmpty()) {
+        errorEl.textContent = built.error || 'İçerik girin.';
+        errorEl.hidden = false;
+      }
       return;
     }
     try {
@@ -510,6 +499,7 @@
     }
     state.cameraStarting = true;
     state.detected = false;
+    state.scanTick = 0;
     setLoading(true);
     hideCameraError();
     try {
@@ -634,6 +624,22 @@
     }
   }
 
+  async function setupBarcodeDetector() {
+    if (state.barcodeDetectorChecked) return;
+    state.barcodeDetectorChecked = true;
+    const Detector = window.BarcodeDetector;
+    if (typeof Detector !== 'function') return;
+    try {
+      if (typeof Detector.getSupportedFormats === 'function') {
+        const formats = await Detector.getSupportedFormats();
+        if (!Array.isArray(formats) || formats.indexOf('qr_code') === -1) return;
+      }
+      state.barcodeDetector = new Detector({ formats: ['qr_code'] });
+    } catch (error) {
+      state.barcodeDetector = null;
+    }
+  }
+
   function startScanLoop() {
     stopScanLoop();
     state.scanBusy = false;
@@ -652,6 +658,23 @@
     if (!video || video.readyState < 2 || !video.videoWidth) return;
     state.scanBusy = true;
     try {
+      if (state.barcodeDetector) {
+        try {
+          const codes = await state.barcodeDetector.detect(video);
+          const found = Array.isArray(codes) ? codes.find((code) => code && code.rawValue) : null;
+          if (found) {
+            onScanSuccess(found.rawValue);
+            return;
+          }
+        } catch (error) {
+          state.barcodeDetector = null;
+        }
+      }
+
+      const shouldRunJsQr = !state.barcodeDetector || state.scanTick % 3 === 0;
+      state.scanTick = (state.scanTick + 1) % 3;
+      if (!shouldRunJsQr) return;
+
       const canvas = $('#scanCanvas');
       const max = 800;
       const scale = Math.min(1, max / Math.max(video.videoWidth, video.videoHeight));
@@ -740,7 +763,7 @@
       } catch (error) {
         source = await loadImageFromFile(file);
       }
-      const result = scanImageSource(source);
+      const result = await scanImageSource(source);
       if (result && result.data) onScanSuccess(result.data);
       else showToast('QR kod bulunamadı. Daha net bir görsel deneyin.');
     } catch (error) {
@@ -765,7 +788,17 @@
     });
   }
 
-  function scanImageSource(source) {
+  async function scanImageSource(source) {
+    if (state.barcodeDetector) {
+      try {
+        const codes = await state.barcodeDetector.detect(source);
+        const found = Array.isArray(codes) ? codes.find((code) => code && code.rawValue) : null;
+        if (found) return { data: found.rawValue };
+      } catch (error) {
+        // jsQR fallback follows.
+      }
+    }
+
     const sourceWidth = source.width || source.naturalWidth;
     const sourceHeight = source.height || source.naturalHeight;
     if (!sourceWidth || !sourceHeight) return null;
