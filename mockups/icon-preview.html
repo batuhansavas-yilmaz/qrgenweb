@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QrGen — Uygulama Simgesi</title>
+  <style>
+    @font-face {
+      font-family: 'Rubik';
+      src: url('../vendor/Rubik.ttf') format('truetype');
+      font-weight: 100 900;
+      font-display: swap;
+    }
+
+    :root {
+      --primary: #5a4ad8;
+      --primary-2: #6a59e8;
+      --primary-soft: #ece9fc;
+      --scaffold: #eaf2fa;
+      --surface: #ffffff;
+      --surface-2: #f3f8fd;
+      --border: #d7e5f1;
+      --txt: #234d6c;
+      --text-2: #4c7493;
+      --text-3: #5c7c94;
+      --shadow: 0 20px 44px rgba(30, 64, 92, .12), 0 3px 10px rgba(30, 64, 92, .06);
+      --shadow-soft: 0 12px 28px rgba(30, 64, 92, .09);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      padding: 34px clamp(20px, 5vw, 64px) 48px;
+      font-family: 'Rubik', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      color: var(--txt);
+      background:
+        radial-gradient(900px 520px at 88% -8%, rgba(106, 89, 232, .16), transparent 62%),
+        radial-gradient(900px 520px at -10% 108%, rgba(84, 173, 224, .18), transparent 60%),
+        var(--scaffold);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    .head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--primary);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .eyebrow::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #7fe4d8;
+      box-shadow: 0 0 0 4px rgba(127, 228, 216, .22);
+    }
+
+    h1 {
+      margin-top: 11px;
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1.05;
+      letter-spacing: -.045em;
+    }
+
+    .sub {
+      max-width: 480px;
+      margin-top: 9px;
+      color: var(--text-2);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 11px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-2);
+      font-size: 10.5px;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(30, 64, 92, .04);
+    }
+
+    .chip i {
+      display: block;
+      width: 11px;
+      height: 11px;
+      border-radius: 4px;
+      background: #5a4ad8;
+    }
+
+    .chip i.mint { background: #5a4ad8; }
+    .chip i.ice { background: #ffffff; border: 1px solid var(--border); }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.05fr .95fr;
+      gap: 16px;
+    }
+
+    .stage {
+      position: relative;
+      min-height: 390px;
+      padding: 32px;
+      overflow: hidden;
+      border-radius: 26px;
+      border: 1px solid var(--border);
+      background: linear-gradient(145deg, #f7fafc, #e7f1fa);
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .stage.dark {
+      background:
+        radial-gradient(420px 300px at 78% 12%, rgba(111, 99, 246, .24), transparent 65%),
+        linear-gradient(145deg, #161d31, #0c1120);
+      border-color: #263051;
+    }
+
+    .stage::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(18, 34, 47, .035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(18, 34, 47, .035) 1px, transparent 1px);
+      background-size: 34px 34px;
+      mask-image: radial-gradient(circle at center, #000, transparent 78%);
+      pointer-events: none;
+    }
+
+    .stage.dark::before {
+      background-image:
+        linear-gradient(rgba(255, 255, 255, .045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, .045) 1px, transparent 1px);
+    }
+
+    .icon-xl {
+      position: relative;
+      z-index: 1;
+      width: min(280px, 62vw);
+      height: auto;
+      display: block;
+      border-radius: 26%;
+      box-shadow: 0 30px 50px rgba(30, 64, 92, .20), 0 0 0 1px rgba(30, 64, 92, .06);
+    }
+
+    .stage.dark .icon-xl {
+      box-shadow: 0 36px 70px rgba(2, 5, 18, .55), 0 0 0 1px rgba(255, 255, 255, .06);
+    }
+
+    .stage-label {
+      position: absolute;
+      z-index: 2;
+      left: 20px;
+      bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--text-3);
+    }
+
+    .stage.dark .stage-label { color: #8791b2; }
+
+    .stage-label span {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #7fe4d8;
+    }
+
+    .sizes {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .size-card {
+      min-height: 136px;
+      padding: 14px 10px 10px;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      box-shadow: var(--shadow-soft);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .size-card img { display: block; flex: 0 0 auto; border-radius: 22%; box-shadow: 0 4px 10px rgba(30, 64, 92, .14), 0 0 0 1px rgba(30, 64, 92, .06); }
+    .size-card strong { font-size: 10px; font-weight: 700; color: var(--text-2); }
+    .size-card small { font-size: 8.5px; color: var(--text-3); }
+
+    .lower {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.1fr;
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .card {
+      padding: 18px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .card h2 {
+      font-size: 12px;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      margin-bottom: 16px;
+    }
+
+    .mask-row {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .circle-mask {
+      width: 106px;
+      height: 106px;
+      flex: 0 0 auto;
+      overflow: hidden;
+      border-radius: 50%;
+      box-shadow: 0 12px 26px rgba(30, 64, 92, .16);
+    }
+
+    .circle-mask img { width: 100%; height: 100%; display: block; }
+    .mask-copy strong { display: block; font-size: 12px; }
+    .mask-copy p { margin-top: 5px; font-size: 10.5px; line-height: 1.5; color: var(--text-2); }
+
+    .lockup {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .lockup img {
+      width: 52px;
+      height: 52px;
+      border-radius: 15px;
+      box-shadow: 0 10px 20px rgba(43, 32, 130, .22);
+    }
+
+    .lockup strong { display: block; font-size: 19px; letter-spacing: -.03em; }
+    .lockup span { display: block; margin-top: 2px; font-size: 10px; color: var(--text-3); }
+
+    .tab-mock {
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 8px 10px;
+      border-radius: 11px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+    }
+
+    .tab-mock img { width: 16px; height: 16px; border-radius: 4px; display: block; box-shadow: 0 0 0 1px var(--border); }
+    .tab-mock span { font-size: 10px; color: var(--text-2); }
+    .tab-mock b { margin-left: auto; font-size: 10px; color: var(--text-3); font-weight: 600; }
+
+    .launcher {
+      position: relative;
+      min-height: 166px;
+      overflow: hidden;
+      border-radius: 20px;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background:
+        radial-gradient(380px 220px at 18% 10%, rgba(106, 89, 232, .55), transparent 60%),
+        radial-gradient(340px 240px at 92% 100%, rgba(60, 175, 204, .35), transparent 60%),
+        linear-gradient(145deg, #1b2340, #0b1020);
+      border: 1px solid #263051;
+    }
+
+    .launcher::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(255, 255, 255, .08), transparent 35%);
+      pointer-events: none;
+    }
+
+    .app-tile {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .app-tile img {
+      width: 74px;
+      height: 74px;
+      border-radius: 19px;
+      box-shadow: 0 16px 30px rgba(2, 5, 18, .45);
+    }
+
+    .app-tile span {
+      color: #f4f6ff;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .01em;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, .35);
+    }
+
+    .note {
+      margin-top: 18px;
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      padding: 13px 16px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, .6);
+      color: var(--text-2);
+      font-size: 11px;
+      line-height: 1.55;
+      box-shadow: 0 6px 18px rgba(30, 64, 92, .05);
+    }
+
+    .note strong { color: var(--txt); }
+    .note-dot {
+      width: 8px;
+      height: 8px;
+      flex: 0 0 auto;
+      margin-top: 4px;
+      border-radius: 50%;
+      background: #7fe4d8;
+      box-shadow: 0 0 0 4px rgba(127, 228, 216, .24);
+    }
+
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; }
+      .stage { min-height: 300px; }
+      .sizes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .lower { grid-template-columns: 1fr 1fr; }
+      .lower .card:last-child { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 620px) {
+      body { padding: 22px 15px 34px; }
+      .head { align-items: flex-start; }
+      .meta { justify-content: flex-start; }
+      .stage { min-height: 260px; padding: 22px; }
+      .icon-xl { width: min(230px, 68vw); }
+      .sizes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .lower { grid-template-columns: 1fr; }
+      .lower .card:last-child { grid-column: auto; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="head">
+      <div>
+        <span class="eyebrow">Öneri 01 · QR + tarama + üretim</span>
+        <h1>QrGen uygulama simgesi</h1>
+        <p class="sub">Beyaz zemin, sade siyah QR, indigo tarama çizgisi ve üretimi anlatan + rozet. 16 px’te bile okunur; PWA ve favicon için vektörel.</p>
+      </div>
+      <div class="meta">
+        <span class="chip"><i></i> #0b1020</span>
+        <span class="chip"><i class="mint"></i> #5a4ad8</span>
+        <span class="chip"><i class="ice"></i> beyaz zemin</span>
+      </div>
+    </header>
+
+    <section class="hero" aria-label="Büyük simge önizlemesi">
+      <div class="stage">
+        <img class="icon-xl" src="../assets/icon.svg" alt="QrGen uygulama simgesi">
+        <span class="stage-label"><span></span> Açık zemin</span>
+      </div>
+      <div class="stage dark">
+        <img class="icon-xl" src="../assets/icon.svg" alt="QrGen uygulama simgesi">
+        <span class="stage-label"><span></span> Koyu zemin</span>
+      </div>
+    </section>
+
+    <section class="sizes" aria-label="Farklı boyutlar">
+      <div class="size-card"><img src="../assets/icon.svg" width="96" height="96" alt=""><strong>96 px</strong><small>PWA</small></div>
+      <div class="size-card"><img src="../assets/icon.svg" width="64" height="64" alt=""><strong>64 px</strong><small>masaüstü</small></div>
+      <div class="size-card"><img src="../assets/icon.svg" width="48" height="48" alt=""><strong>48 px</strong><small>kısayol</small></div>
+      <div class="size-card"><img src="../assets/icon.svg" width="32" height="32" alt=""><strong>32 px</strong><small>favicon</small></div>
+      <div class="size-card"><img src="../assets/icon.svg" width="24" height="24" alt=""><strong>24 px</strong><small>sekme</small></div>
+      <div class="size-card"><img src="../assets/icon.svg" width="16" height="16" alt=""><strong>16 px</strong><small>minimum</small></div>
+    </section>
+
+    <section class="lower">
+      <div class="card">
+        <h2>Android mask</h2>
+        <div class="mask-row">
+          <div class="circle-mask">
+            <img src="../assets/icon-maskable.svg" alt="Daire maskeli QrGen simgesi">
+          </div>
+          <div class="mask-copy">
+            <strong>Safe zone hazır</strong>
+            <p>Maskable sürümde içerik güvenli alanda; daire, squircle veya başka maskelerde kırpılmaz.</p>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Uygulama kilidi</h2>
+        <div class="lockup">
+          <img src="../assets/icon.svg" alt="">
+          <div>
+            <strong>QrGen</strong>
+            <span>Oluştur &amp; tara</span>
+          </div>
+        </div>
+        <div class="tab-mock">
+          <img src="../assets/icon.svg" alt="">
+          <span>QrGen — QR Oluştur ve Tara</span>
+          <b>×</b>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Ana ekran</h2>
+        <div class="launcher">
+          <div class="app-tile">
+            <img src="../assets/icon.svg" alt="">
+            <span>QrGen</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <p class="note"><span class="note-dot"></span><span><strong>Neden bu:</strong> QR üç köşe deseniyle küçük boyutta da tanınır; tarama çizgisi “tara”yı, + rozet “oluştur”u anlatır. Çark yerine artı seçildi çünkü 16–32 px’te daha net kalıyor. Beyaz zemin + siyah QR, indigo vurgularla textrecweb temasına bağlanır.</span></p>
+  </main>
+</body>
+</html>

@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="iconTitle iconDesc">
+  <title id="iconTitle">QrGen</title>
+  <desc id="iconDesc">White app icon with a black QR code, an indigo scan line and a plus badge for creating codes.</desc>
+  <defs>
+    <linearGradient id="bg" x1="72" y1="32" x2="448" y2="480" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".58" stop-color="#f8fbfe"/>
+      <stop offset="1" stop-color="#eaf2fa"/>
+    </linearGradient>
+    <radialGradient id="shine" cx="0" cy="0" r="1" gradientTransform="translate(132 92) rotate(45) scale(430)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5a4ad8" stop-opacity=".08"/>
+      <stop offset=".55" stop-color="#5a4ad8" stop-opacity=".02"/>
+      <stop offset="1" stop-color="#5a4ad8" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="bottomGlow" cx="0" cy="0" r="1" gradientTransform="translate(402 430) rotate(-135) scale(270)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5a4ad8" stop-opacity=".08"/>
+      <stop offset="1" stop-color="#5a4ad8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="scan" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#5a4ad8" stop-opacity="0"/>
+      <stop offset=".16" stop-color="#5a4ad8" stop-opacity=".8"/>
+      <stop offset=".5" stop-color="#5a4ad8"/>
+      <stop offset=".84" stop-color="#5a4ad8" stop-opacity=".8"/>
+      <stop offset="1" stop-color="#5a4ad8" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="scanGlow" x="-20%" y="-500%" width="140%" height="1100%">
+      <feGaussianBlur stdDeviation="9"/>
+    </filter>
+    <filter id="laserGlow" x="-300%" y="-300%" width="700%" height="700%">
+      <feGaussianBlur stdDeviation="11"/>
+    </filter>
+    <linearGradient id="badgeBg" x1="334" y1="334" x2="410" y2="410" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6a59e8"/>
+      <stop offset="1" stop-color="#4b3cc4"/>
+    </linearGradient>
+    <filter id="badgeShadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="6" stdDeviation="7" flood-color="#2b207a" flood-opacity=".22"/>
+    </filter>
+    <clipPath id="card">
+      <rect width="512" height="512" rx="112"/>
+    </clipPath>
+    <mask id="qr">
+      <rect x="113" y="113" width="286" height="286" fill="#000"/>
+      <g fill="#fff">
+        <rect x="113" y="113" width="110" height="110" rx="6"/>
+        <rect x="135" y="135" width="66" height="66" rx="4" fill="#000"/>
+        <rect x="157" y="157" width="22" height="22" rx="3"/>
+
+        <rect x="289" y="113" width="110" height="110" rx="6"/>
+        <rect x="311" y="135" width="66" height="66" rx="4" fill="#000"/>
+        <rect x="333" y="157" width="22" height="22" rx="3"/>
+
+        <rect x="113" y="289" width="110" height="110" rx="6"/>
+        <rect x="135" y="311" width="66" height="66" rx="4" fill="#000"/>
+        <rect x="157" y="333" width="22" height="22" rx="3"/>
+
+        <rect x="223" y="223" width="22" height="22" rx="3"/>
+        <rect x="267" y="223" width="22" height="22" rx="3"/>
+        <rect x="223" y="267" width="22" height="22" rx="3"/>
+        <rect x="267" y="267" width="22" height="22" rx="3"/>
+        <rect x="223" y="245" width="22" height="22" rx="3"/>
+        <rect x="267" y="245" width="22" height="22" rx="3"/>
+        <rect x="245" y="223" width="22" height="22" rx="3"/>
+        <rect x="245" y="267" width="22" height="22" rx="3"/>
+
+        <rect x="289" y="245" width="22" height="22" rx="3"/>
+        <rect x="311" y="245" width="22" height="22" rx="3"/>
+        <rect x="355" y="245" width="22" height="22" rx="3"/>
+        <rect x="333" y="267" width="22" height="22" rx="3"/>
+        <rect x="377" y="267" width="22" height="22" rx="3"/>
+        <rect x="311" y="289" width="22" height="22" rx="3"/>
+        <rect x="355" y="289" width="22" height="22" rx="3"/>
+        <rect x="377" y="289" width="22" height="22" rx="3"/>
+        <rect x="289" y="311" width="22" height="22" rx="3"/>
+        <rect x="289" y="355" width="22" height="22" rx="3"/>
+      </g>
+    </mask>
+  </defs>
+
+  <g clip-path="url(#card)">
+    <rect width="512" height="512" fill="url(#bg)"/>
+    <rect width="512" height="512" fill="url(#shine)"/>
+    <rect width="512" height="512" fill="url(#bottomGlow)"/>
+    <rect x="113" y="113" width="286" height="286" fill="#0b1020" mask="url(#qr)"/>
+
+    <g>
+      <rect x="84" y="250" width="344" height="12" rx="6" fill="url(#scan)" opacity=".5" filter="url(#scanGlow)"/>
+      <rect x="90" y="253" width="332" height="6" rx="3" fill="url(#scan)"/>
+      <circle cx="425" cy="256" r="15" fill="#5a4ad8" opacity=".24" filter="url(#laserGlow)"/>
+      <circle cx="425" cy="256" r="5" fill="#8b80ff"/>
+    </g>
+
+    <g>
+      <circle cx="372" cy="372" r="43" fill="#ffffff"/>
+      <circle cx="372" cy="372" r="38" fill="url(#badgeBg)" filter="url(#badgeShadow)"/>
+      <path d="M372 354v36M354 372h36" fill="none" stroke="#ffffff" stroke-width="10" stroke-linecap="round"/>
+    </g>
+
+    <rect x="1" y="1" width="510" height="510" rx="111" fill="none" stroke="#d7e5f1" stroke-width="2"/>
+  </g>
+</svg>

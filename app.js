@@ -1,0 +1,1359 @@
+(function () {
+  'use strict';
+
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+
+  const DEMO_SITE = 'https://batuhansavas-yilmaz.github.io/qrgenweb/';
+  const DEMO_PHONE = '+905321234567';
+  const DEMO_NAME = 'QrGen Demo';
+  const DEMO_VCARD = [
+    'BEGIN:VCARD',
+    'VERSION:3.0',
+    'FN:' + DEMO_NAME,
+    'TEL;TYPE=CELL:' + DEMO_PHONE,
+    'URL:' + DEMO_SITE,
+    'END:VCARD'
+  ].join('\r\n');
+  const WHATSAPP_TEXT = 'Merhaba, QR kodu ile ulaşıyorum.';
+  const TYPE_LABELS = {
+    url: 'Site',
+    phone: 'Telefon',
+    email: 'E-posta',
+    sms: 'SMS',
+    wifi: 'Wi-Fi',
+    vcard: 'Kişi',
+    mixed: 'Site + Numara',
+    text: 'Metin',
+    geo: 'Konum'
+  };
+  const VIEW_META = {
+    home: { title: 'Qr Oluştur ve Tara', back: false, brand: true },
+    generate: { title: 'QR Oluştur', back: true, brand: false },
+    scan: { title: 'QR Tara', back: true, brand: false },
+    result: { title: 'Sonuç', back: true, brand: false }
+  };
+
+  const state = {
+    view: 'home',
+    generateType: 'url',
+    generatedData: '',
+    generatedLabel: '',
+    logoData: null,
+    previewQr: null,
+    heroQr: null,
+    demoQrs: {},
+    stream: null,
+    videoTrack: null,
+    scanTimer: null,
+    scanning: false,
+    scanBusy: false,
+    cameraStarting: false,
+    torch: false,
+    facingMode: 'environment',
+    focusTimer: null,
+    result: null,
+    detected: false
+  };
+
+  const debouncedUpdatePreview = debounce(updatePreview, 140);
+
+  init();
+
+  function init() {
+    setupTheme();
+    initNavigation();
+    initQrCodes();
+    initGenerate();
+    initScan();
+    initResult();
+    routeInitial();
+    registerServiceWorker();
+  }
+
+  function setupTheme() {
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const apply = () => {
+      document.documentElement.dataset.theme = media.matches ? 'dark' : 'light';
+    };
+    apply();
+    if (media.addEventListener) media.addEventListener('change', apply);
+    else if (media.addListener) media.addListener(apply);
+  }
+
+  function initNavigation() {
+    $('#backBtn').addEventListener('click', () => {
+      if (state.view === 'result') navigate('scan');
+      else navigate('home');
+    });
+    $('#goGenerate').addEventListener('click', () => navigate('generate'));
+    $('#goScan').addEventListener('click', () => navigate('scan'));
+    window.addEventListener('hashchange', handleRoute);
+  }
+
+  function navigate(name) {
+    if (location.hash === '#' + name) showView(name);
+    else location.hash = name;
+  }
+
+  function handleRoute() {
+    const name = location.hash.replace('#', '') || 'home';
+    showView(VIEW_META[name] ? name : 'home');
+  }
+
+  function routeInitial() {
+    const name = location.hash.replace('#', '');
+    showView(VIEW_META[name] ? name : 'home');
+  }
+
+  function showView(name) {
+    if (name === 'result' && !state.result) name = 'home';
+    if (state.view === 'scan' && name !== 'scan') stopCamera();
+    state.view = name;
+    $$('.view').forEach((view) => {
+      view.hidden = view.id !== name + 'View';
+    });
+    const meta = VIEW_META[name];
+    $('#appbarTitle').textContent = meta.title;
+    $('#backBtn').hidden = !meta.back;
+    $('#brandBtn').hidden = !meta.brand;
+    document.documentElement.dataset.view = name;
+    window.scrollTo({ top: 0, behavior: 'auto' });
+    if (name === 'generate') updatePreview();
+    if (name === 'scan') resetScanUi();
+  }
+
+  function initQrCodes() {
+    if (!hasQrEngine()) {
+      showToast('QR motoru yüklenemedi. Sayfayı yenileyin.');
+      return;
+    }
+    state.heroQr = createStaticQr('heroQr', DEMO_SITE, 512);
+    state.demoQrs.site = createStaticQr('demoSiteQr', DEMO_SITE, 512);
+    state.demoQrs.phone = createStaticQr('demoPhoneQr', 'tel:' + DEMO_PHONE, 512);
+    state.demoQrs.both = createStaticQr('demoBothQr', DEMO_VCARD, 512);
+    renderPreviewQr(DEMO_SITE, 1024, '#0b1020', '#ffffff', null);
+  }
+
+  function hasQrEngine() {
+    return typeof window.QRCodeStyling === 'function';
+  }
+
+  function qrOptions(data, size, fg, bg, logo) {
+    const options = {
+      type: 'canvas',
+      width: size,
+      height: size,
+      data,
+      margin: Math.max(8, Math.round(size * 0.03)),
+      qrOptions: { errorCorrectionLevel: 'H' },
+      dotsOptions: { color: fg, type: 'rounded' },
+      cornersSquareOptions: { color: fg, type: 'extra-rounded' },
+      cornersDotOptions: { color: fg, type: 'dot' },
+      backgroundOptions: { color: bg }
+    };
+    if (logo) {
+      options.image = logo;
+      options.imageOptions = {
+        crossOrigin: 'anonymous',
+        margin: 6,
+        imageSize: 0.32,
+        hideBackgroundDots: true
+      };
+    }
+    return options;
+  }
+
+  function createStaticQr(targetId, data, size) {
+    const target = document.getElementById(targetId);
+    if (!target) return null;
+    target.innerHTML = '';
+    const qr = new window.QRCodeStyling(qrOptions(data, size, '#0b1020', '#ffffff', null));
+    qr.append(target);
+    return qr;
+  }
+
+  function renderPreviewQr(data, size, fg, bg, logo) {
+    const target = $('#previewQr');
+    if (!target || !hasQrEngine()) return;
+    target.innerHTML = '';
+    const qr = new window.QRCodeStyling(qrOptions(data, size, fg, bg, logo));
+    qr.append(target);
+    state.previewQr = qr;
+  }
+
+  function initGenerate() {
+    $$('#typeChips .chip').forEach((chip) => {
+      chip.addEventListener('click', () => setGenerateType(chip.dataset.type));
+    });
+    $$('.field-group input, .field-group textarea, .field-group select').forEach((field) => {
+      field.addEventListener('input', debouncedUpdatePreview);
+      field.addEventListener('change', debouncedUpdatePreview);
+    });
+    $('#fgColor').addEventListener('input', debouncedUpdatePreview);
+    $('#bgColor').addEventListener('input', debouncedUpdatePreview);
+    $('#qrSize').addEventListener('change', updatePreview);
+    $('#logoInput').addEventListener('change', handleLogoChange);
+    $('#removeLogo').addEventListener('click', removeLogo);
+    $('#downloadPng').addEventListener('click', () => downloadPreview('png'));
+    $('#downloadSvg').addEventListener('click', () => downloadPreview('svg'));
+    $('#copyQr').addEventListener('click', copyPreview);
+    $('#shareQr').addEventListener('click', sharePreview);
+    setGenerateType('url');
+  }
+
+  function setGenerateType(type) {
+    state.generateType = type;
+    $$('#typeChips .chip').forEach((chip) => {
+      chip.classList.toggle('active', chip.dataset.type === type);
+    });
+    $$('.field-group').forEach((group) => {
+      group.hidden = group.dataset.group !== type;
+    });
+    fillTypeDefaults(type);
+    updatePreview();
+  }
+
+  function fillTypeDefaults(type) {
+    const setIfEmpty = (selector, value) => {
+      const field = $(selector);
+      if (field && !field.value) field.value = value;
+    };
+    if (type === 'text') setIfEmpty('#genText', 'Merhaba! QrGen ile oluşturuldu.');
+    if (type === 'phone') setIfEmpty('#genPhone', '+90 532 123 45 67');
+    if (type === 'email') setIfEmpty('#genEmail', 'merhaba@example.com');
+    if (type === 'sms') {
+      setIfEmpty('#genSmsPhone', '+90 532 123 45 67');
+      setIfEmpty('#genSmsBody', 'Merhaba!');
+    }
+    if (type === 'wifi') {
+      setIfEmpty('#genWifiSsid', 'QrGen Wi-Fi');
+      setIfEmpty('#genWifiPassword', 'qrgen1234');
+    }
+    if (type === 'vcard') {
+      setIfEmpty('#genVName', DEMO_NAME);
+      setIfEmpty('#genVPhone', '+90 532 123 45 67');
+      setIfEmpty('#genVUrl', DEMO_SITE);
+    }
+  }
+
+  function buildContent() {
+    const type = state.generateType;
+    if (type === 'url') {
+      const url = normalizeUrl($('#genUrl').value);
+      if (!url) return { valid: false, error: 'Geçerli bir website adresi girin.' };
+      return { valid: true, data: url, label: 'URL', summary: url };
+    }
+    if (type === 'text') {
+      const text = $('#genText').value.trim();
+      if (!text) return { valid: false, error: 'Metin girin.' };
+      return { valid: true, data: text, label: 'Metin', summary: shorten(text, 90) };
+    }
+    if (type === 'phone') {
+      const phone = normalizePhone($('#genPhone').value);
+      if (!phone) return { valid: false, error: 'Geçerli bir telefon numarası girin.' };
+      return { valid: true, data: 'tel:' + phone, label: 'Telefon', summary: formatPhone(phone) };
+    }
+    if (type === 'email') {
+      const email = $('#genEmail').value.trim();
+      if (!isEmail(email)) return { valid: false, error: 'Geçerli bir e-posta adresi girin.' };
+      const params = new URLSearchParams();
+      const subject = $('#genEmailSubject').value.trim();
+      const body = $('#genEmailBody').value.trim();
+      if (subject) params.set('subject', subject);
+      if (body) params.set('body', body);
+      const query = params.toString();
+      return {
+        valid: true,
+        data: 'mailto:' + email + (query ? '?' + query : ''),
+        label: 'E-posta',
+        summary: email
+      };
+    }
+    if (type === 'sms') {
+      const phone = normalizePhone($('#genSmsPhone').value);
+      if (!phone) return { valid: false, error: 'Geçerli bir telefon numarası girin.' };
+      const body = $('#genSmsBody').value.trim();
+      return {
+        valid: true,
+        data: 'SMSTO:' + phone + (body ? ':' + body : ''),
+        label: 'SMS',
+        summary: formatPhone(phone) + (body ? ' · ' + shorten(body, 42) : '')
+      };
+    }
+    if (type === 'wifi') {
+      const ssid = $('#genWifiSsid').value.trim();
+      if (!ssid) return { valid: false, error: 'Ağ adı (SSID) girin.' };
+      const password = $('#genWifiPassword').value;
+      const encryption = $('#genWifiEnc').value;
+      const hidden = $('#genWifiHidden').checked;
+      const data = 'WIFI:T:' + encryption + ';S:' + escapeWifi(ssid) + ';P:' + escapeWifi(password) + ';' + (hidden ? 'H:true;' : '') + ';';
+      return { valid: true, data, label: 'Wi-Fi', summary: ssid };
+    }
+    if (type === 'vcard') {
+      const name = $('#genVName').value.trim();
+      const phone = normalizePhone($('#genVPhone').value);
+      const email = $('#genVEmail').value.trim();
+      const org = $('#genVOrg').value.trim();
+      const title = $('#genVTitle').value.trim();
+      const url = normalizeUrl($('#genVUrl').value);
+      if (!name && !phone && !email && !url) {
+        return { valid: false, error: 'En az bir kişi bilgisi girin.' };
+      }
+      const data = buildVCardData({
+        name: name || 'QrGen Kişisi',
+        phone,
+        email: isEmail(email) ? email : '',
+        org,
+        title,
+        url
+      });
+      return {
+        valid: true,
+        data,
+        label: 'vCard',
+        summary: [name || 'QrGen Kişisi', phone ? formatPhone(phone) : '', url ? 'site' : ''].filter(Boolean).join(' · ')
+      };
+    }
+    return { valid: false, error: 'İçerik türü seçin.' };
+  }
+
+  function updatePreview() {
+    const errorEl = $('#previewError');
+    errorEl.hidden = true;
+    errorEl.textContent = '';
+    const built = buildContent();
+    const qrBox = $('#previewQr');
+    const placeholder = $('#previewPlaceholder');
+    const actionButtons = [$('#downloadPng'), $('#downloadSvg'), $('#copyQr'), $('#shareQr')];
+    $('#previewType').textContent = built.label || TYPE_LABELS[state.generateType] || 'QR';
+    if (!built.valid) {
+      state.generatedData = '';
+      qrBox.hidden = true;
+      placeholder.hidden = false;
+      $('#previewSummary').textContent = 'İçerik bekleniyor.';
+      actionButtons.forEach((button) => { button.disabled = true; });
+      errorEl.textContent = built.error || 'İçerik girin.';
+      errorEl.hidden = false;
+      return;
+    }
+    try {
+      const size = Number($('#qrSize').value);
+      renderPreviewQr(built.data, size, $('#fgColor').value, $('#bgColor').value, state.logoData);
+      state.generatedData = built.data;
+      state.generatedLabel = built.label;
+      qrBox.hidden = false;
+      placeholder.hidden = true;
+      $('#previewSummary').textContent = built.summary || built.label;
+      actionButtons.forEach((button) => { button.disabled = false; });
+    } catch (error) {
+      console.error(error);
+      state.generatedData = '';
+      qrBox.hidden = true;
+      placeholder.hidden = false;
+      actionButtons.forEach((button) => { button.disabled = true; });
+      errorEl.textContent = 'Bu içerik için QR oluşturulamadı.';
+      errorEl.hidden = false;
+    }
+  }
+
+  async function handleLogoChange(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showToast('Lütfen bir görsel seçin.');
+      return;
+    }
+    try {
+      state.logoData = await fileToLogoDataUrl(file);
+      $('#removeLogo').hidden = false;
+      updatePreview();
+      showToast('Logo eklendi.');
+    } catch (error) {
+      console.error(error);
+      showToast('Logo yüklenemedi.');
+    }
+  }
+
+  function fileToLogoDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const image = new Image();
+        image.onload = () => {
+          const max = 512;
+          const scale = Math.min(1, max / Math.max(image.width, image.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(image.width * scale));
+          canvas.height = Math.max(1, Math.round(image.height * scale));
+          const context = canvas.getContext('2d');
+          context.drawImage(image, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/png'));
+        };
+        image.onerror = () => reject(new Error('image'));
+        image.src = reader.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function removeLogo() {
+    state.logoData = null;
+    $('#logoInput').value = '';
+    $('#removeLogo').hidden = true;
+    updatePreview();
+  }
+
+  async function downloadPreview(extension) {
+    if (!state.generatedData || !state.previewQr) return;
+    setLoading(true);
+    try {
+      const raw = await state.previewQr.getRawData(extension);
+      const blob = raw instanceof Blob ? raw : new Blob([raw], { type: extension === 'svg' ? 'image/svg+xml' : 'image/png' });
+      const name = 'qrgen-' + state.generateType + '-' + Date.now() + '.' + extension;
+      downloadBlob(blob, name);
+      showToast(extension === 'svg' ? 'SVG indirildi.' : 'PNG indirildi.');
+    } catch (error) {
+      console.error(error);
+      showToast('Dosya oluşturulamadı.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function copyPreview() {
+    if (!state.previewQr) return;
+    try {
+      const blob = await state.previewQr.getRawData('png');
+      if (!navigator.clipboard || !window.ClipboardItem) throw new Error('clipboard');
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      showToast('QR panoya kopyalandı.');
+    } catch (error) {
+      showToast('Panoya kopyalanamadı; PNG olarak indirin.');
+    }
+  }
+
+  async function sharePreview() {
+    if (!state.previewQr) return;
+    try {
+      const blob = await state.previewQr.getRawData('png');
+      const file = new File([blob], 'qrgen.png', { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'QrGen', text: 'QR kodum' });
+        return;
+      }
+      downloadBlob(blob, 'qrgen.png');
+      showToast('Paylaşım desteklenmiyor; PNG indirildi.');
+    } catch (error) {
+      if (error.name !== 'AbortError') showToast('Paylaşım açılamadı.');
+    }
+  }
+
+  function buildVCardData(contact) {
+    const lines = ['BEGIN:VCARD', 'VERSION:3.0'];
+    if (contact.name) lines.push('FN:' + escapeVCard(contact.name));
+    if (contact.org) lines.push('ORG:' + escapeVCard(contact.org));
+    if (contact.title) lines.push('TITLE:' + escapeVCard(contact.title));
+    if (contact.phone) lines.push('TEL;TYPE=CELL:' + contact.phone.replace(/[^\d+]/g, ''));
+    if (contact.email) lines.push('EMAIL:' + contact.email);
+    if (contact.url) lines.push('URL:' + contact.url);
+    lines.push('END:VCARD');
+    return lines.join('\r\n') + '\r\n';
+  }
+
+  async function saveContact(contact) {
+    if (!contact.phone && !contact.email && !contact.url) {
+      showToast('Kaydedilecek kişi bilgisi yok.');
+      return;
+    }
+    const data = buildVCardData(contact);
+    const blob = new Blob([data], { type: 'text/vcard;charset=utf-8' });
+    const file = new File([blob], 'qrgen-kisi.vcf', { type: 'text/vcard' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: 'Rehbere kaydet', text: contact.name || 'QrGen kişisi' });
+        return;
+      } catch (error) {
+        if (error.name === 'AbortError') return;
+      }
+    }
+    downloadBlob(blob, 'qrgen-kisi.vcf');
+    showToast('Kişi dosyası indirildi; rehber uygulamasında açıp kaydedin.');
+  }
+
+  function initScan() {
+    $('#startCameraBtn').addEventListener('click', startCamera);
+    $('#stopCameraBtn').addEventListener('click', () => {
+      stopCamera();
+      resetScanUi();
+    });
+    $('#scanFileBtn').addEventListener('click', () => $('#scanFileInput').click());
+    $('#scanFileInput').addEventListener('change', (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (file) handleScanFile(file);
+      event.target.value = '';
+    });
+    $('#scanPasteBtn').addEventListener('click', pasteFromClipboard);
+    $('#flashBtn').addEventListener('click', toggleTorch);
+    $('#flipBtn').addEventListener('click', flipCamera);
+    $('#zoomRange').addEventListener('input', applyZoom);
+    $('#cameraStage').addEventListener('click', handleCameraTap);
+    $('#dropZone').addEventListener('click', () => $('#scanFileInput').click());
+    ['dragover', 'dragenter'].forEach((name) => {
+      $('#dropZone').addEventListener(name, (event) => {
+        event.preventDefault();
+        $('#dropZone').classList.add('dragover');
+      });
+      $('#cameraStage').addEventListener(name, (event) => {
+        event.preventDefault();
+        $('#dropZone').classList.add('dragover');
+      });
+    });
+    ['dragleave', 'drop'].forEach((name) => {
+      $('#dropZone').addEventListener(name, () => $('#dropZone').classList.remove('dragover'));
+      $('#cameraStage').addEventListener(name, () => $('#dropZone').classList.remove('dragover'));
+    });
+    $('#dropZone').addEventListener('drop', handleDrop);
+    $('#cameraStage').addEventListener('drop', handleDrop);
+    document.addEventListener('paste', handlePaste);
+  }
+
+  async function startCamera() {
+    if (state.stream || state.cameraStarting) return;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      showCameraError('Kamera bu tarayıcıda desteklenmiyor. Dosyadan tarama yapabilirsin.');
+      return;
+    }
+    state.cameraStarting = true;
+    state.detected = false;
+    setLoading(true);
+    hideCameraError();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          facingMode: { ideal: state.facingMode },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      });
+      state.stream = stream;
+      state.videoTrack = stream.getVideoTracks()[0];
+      const video = $('#scanVideo');
+      video.srcObject = stream;
+      video.hidden = false;
+      await video.play();
+      $('#cameraPlaceholder').hidden = true;
+      $('#cameraOverlay').hidden = false;
+      $('#startCameraBtn').hidden = true;
+      $('#stopCameraBtn').hidden = false;
+      state.scanning = true;
+      updateCameraCapabilities();
+      startScanLoop();
+    } catch (error) {
+      console.error(error);
+      showCameraError(cameraErrorMessage(error));
+      stopCamera();
+    } finally {
+      state.cameraStarting = false;
+      setLoading(false);
+    }
+  }
+
+  function cameraErrorMessage(error) {
+    if (error.name === 'NotAllowedError' || error.name === 'SecurityError') {
+      return 'Kamera izni verilmedi. Tarayıcı adres çubuğundaki kamera iznini aç veya dosyadan tara.';
+    }
+    if (error.name === 'NotFoundError' || error.name === 'OverconstrainedError') {
+      return 'Kamera bulunamadı. Dosyadan tarama yapabilirsin.';
+    }
+    if (error.name === 'NotReadableError') {
+      return 'Kamera başka bir uygulama tarafından kullanılıyor. Kamerayı kapatıp tekrar dene.';
+    }
+    return 'Kamera açılamadı. Dosyadan tarama yapabilirsin.';
+  }
+
+  function showCameraError(message) {
+    const element = $('#cameraError');
+    element.textContent = message;
+    element.hidden = false;
+  }
+
+  function hideCameraError() {
+    $('#cameraError').hidden = true;
+  }
+
+  function stopCamera() {
+    state.scanning = false;
+    stopScanLoop();
+    if (state.stream) {
+      state.stream.getTracks().forEach((track) => track.stop());
+    }
+    state.stream = null;
+    state.videoTrack = null;
+    const video = $('#scanVideo');
+    if (video) {
+      video.pause();
+      video.srcObject = null;
+      video.hidden = true;
+    }
+    $('#cameraOverlay').hidden = true;
+    $('#cameraPlaceholder').hidden = false;
+    $('#startCameraBtn').hidden = false;
+    $('#stopCameraBtn').hidden = true;
+    $('#flashBtn').hidden = true;
+    $('#flipBtn').hidden = true;
+    $('#zoomWrap').hidden = true;
+    $('#focusRing').hidden = true;
+    $('#flashBtn').classList.remove('active');
+    state.torch = false;
+  }
+
+  function resetScanUi() {
+    stopCamera();
+    hideCameraError();
+    $('#focusRing').hidden = true;
+    $('#cameraPlaceholder').hidden = false;
+    $('#cameraOverlay').hidden = true;
+    $('#startCameraBtn').hidden = false;
+    $('#stopCameraBtn').hidden = true;
+  }
+
+  function updateCameraCapabilities() {
+    const track = state.videoTrack;
+    if (!track) return;
+    const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+    $('#flashBtn').hidden = !capabilities.torch;
+    if (capabilities.zoom) {
+      $('#zoomWrap').hidden = false;
+      const range = $('#zoomRange');
+      range.min = capabilities.zoom.min != null ? capabilities.zoom.min : 1;
+      range.max = capabilities.zoom.max != null ? capabilities.zoom.max : 1;
+      range.step = capabilities.zoom.step != null ? capabilities.zoom.step : 0.1;
+      range.value = range.min;
+      updateZoomLabel();
+    } else {
+      $('#zoomWrap').hidden = true;
+    }
+    if (capabilities.focusMode && capabilities.focusMode.indexOf('continuous') !== -1) {
+      track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
+    }
+    refreshFlipVisibility();
+  }
+
+  async function refreshFlipVisibility() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cameras = devices.filter((device) => device.kind === 'videoinput');
+      $('#flipBtn').hidden = cameras.length < 2;
+    } catch (error) {
+      $('#flipBtn').hidden = true;
+    }
+  }
+
+  function startScanLoop() {
+    stopScanLoop();
+    state.scanBusy = false;
+    state.scanTimer = setInterval(scanFrame, 180);
+  }
+
+  function stopScanLoop() {
+    if (state.scanTimer) clearInterval(state.scanTimer);
+    state.scanTimer = null;
+    state.scanBusy = false;
+  }
+
+  async function scanFrame() {
+    if (!state.scanning || state.scanBusy || state.detected) return;
+    const video = $('#scanVideo');
+    if (!video || video.readyState < 2 || !video.videoWidth) return;
+    state.scanBusy = true;
+    try {
+      const canvas = $('#scanCanvas');
+      const max = 800;
+      const scale = Math.min(1, max / Math.max(video.videoWidth, video.videoHeight));
+      const width = Math.max(1, Math.round(video.videoWidth * scale));
+      const height = Math.max(1, Math.round(video.videoHeight * scale));
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      context.drawImage(video, 0, 0, width, height);
+      const imageData = context.getImageData(0, 0, width, height);
+      if (!window.jsQR) return;
+      const result = window.jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' });
+      if (result && result.data) onScanSuccess(result.data);
+    } catch (error) {
+      // Camera frame errors are transient.
+    } finally {
+      state.scanBusy = false;
+    }
+  }
+
+  function onScanSuccess(data) {
+    if (state.detected) return;
+    state.detected = true;
+    stopCamera();
+    const parsed = parseContent(data);
+    state.result = parsed;
+    renderResult(parsed);
+    navigate('result');
+    if (navigator.vibrate) navigator.vibrate(60);
+  }
+
+  function handleCameraTap(event) {
+    if (!state.scanning) return;
+    if (event.target.closest('button') || event.target.closest('input')) return;
+    const stage = $('#cameraStage');
+    const rect = stage.getBoundingClientRect();
+    const x = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+    const y = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));
+    const ring = $('#focusRing');
+    ring.style.left = (event.clientX - rect.left) + 'px';
+    ring.style.top = (event.clientY - rect.top) + 'px';
+    ring.hidden = false;
+    ring.classList.remove('focusing');
+    void ring.offsetWidth;
+    ring.classList.add('focusing');
+    clearTimeout(state.focusTimer);
+    state.focusTimer = setTimeout(() => { ring.hidden = true; }, 1100);
+    applyFocus(x, y);
+  }
+
+  async function applyFocus(x, y) {
+    const track = state.videoTrack;
+    if (!track) return;
+    const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+    const advanced = [];
+    if (capabilities.pointsOfInterest) advanced.push({ pointsOfInterest: [{ x, y }] });
+    if (capabilities.focusMode) {
+      if (capabilities.focusMode.indexOf('single-shot') !== -1) advanced.push({ focusMode: 'single-shot' });
+      else if (capabilities.focusMode.indexOf('continuous') !== -1) advanced.push({ focusMode: 'continuous' });
+    }
+    if (!advanced.length) return;
+    try {
+      await track.applyConstraints({ advanced });
+    } catch (error) {
+      // Hardware focus is optional.
+    }
+  }
+
+  async function toggleTorch() {
+    if (!state.videoTrack) return;
+    try {
+      state.torch = !state.torch;
+      await state.videoTrack.applyConstraints({ advanced: [{ torch: state.torch }] });
+      $('#flashBtn').classList.toggle('active', state.torch);
+      $('#flashBtn').setAttribute('aria-label', state.torch ? 'Flaşı kapat' : 'Flaşı aç');
+    } catch (error) {
+      state.torch = false;
+      $('#flashBtn').classList.remove('active');
+      showToast('Flaş bu cihazda desteklenmiyor.');
+    }
+  }
+
+  async function flipCamera() {
+    state.facingMode = state.facingMode === 'environment' ? 'user' : 'environment';
+    stopCamera();
+    await startCamera();
+  }
+
+  async function applyZoom() {
+    if (!state.videoTrack) return;
+    const value = Number($('#zoomRange').value);
+    try {
+      await state.videoTrack.applyConstraints({ advanced: [{ zoom: value }] });
+      updateZoomLabel();
+    } catch (error) {
+      // Zoom is optional.
+    }
+  }
+
+  function updateZoomLabel() {
+    const value = Number($('#zoomRange').value);
+    $('#zoomLabel').textContent = (Math.round(value * 10) / 10) + '×';
+  }
+
+  function handleDrop(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    $('#dropZone').classList.remove('dragover');
+    const file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+    if (file) handleScanFile(file);
+  }
+
+  async function handleScanFile(file) {
+    if (!file || !file.type.startsWith('image/')) {
+      showToast('Lütfen bir görsel seçin.');
+      return;
+    }
+    setLoading(true);
+    try {
+      let source;
+      try {
+        source = await createImageBitmap(file, { imageOrientation: 'from-image' });
+      } catch (error) {
+        source = await loadImageFromFile(file);
+      }
+      const result = scanImageSource(source);
+      if (result && result.data) onScanSuccess(result.data);
+      else showToast('QR kod bulunamadı. Daha net bir görsel deneyin.');
+    } catch (error) {
+      console.error(error);
+      showToast('Görsel okunamadı.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function loadImageFromFile(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = reject;
+        image.src = reader.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function scanImageSource(source) {
+    const sourceWidth = source.width || source.naturalWidth;
+    const sourceHeight = source.height || source.naturalHeight;
+    if (!sourceWidth || !sourceHeight) return null;
+    const max = 1600;
+    const scale = Math.min(1, max / Math.max(sourceWidth, sourceHeight));
+    const width = Math.max(1, Math.round(sourceWidth * scale));
+    const height = Math.max(1, Math.round(sourceHeight * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    context.drawImage(source, 0, 0, width, height);
+    let result = decodeCanvas(canvas);
+    if (result) return result;
+    for (const degrees of [90, 180, 270]) {
+      const rotated = document.createElement('canvas');
+      const radians = degrees * Math.PI / 180;
+      const rotatedWidth = degrees === 180 ? width : height;
+      const rotatedHeight = degrees === 180 ? height : width;
+      rotated.width = rotatedWidth;
+      rotated.height = rotatedHeight;
+      const rotatedContext = rotated.getContext('2d', { willReadFrequently: true });
+      rotatedContext.translate(rotatedWidth / 2, rotatedHeight / 2);
+      rotatedContext.rotate(radians);
+      rotatedContext.drawImage(canvas, -width / 2, -height / 2);
+      result = decodeCanvas(rotated);
+      if (result) return result;
+    }
+    return null;
+  }
+
+  function decodeCanvas(canvas) {
+    if (!window.jsQR) return null;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    return window.jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' });
+  }
+
+  async function pasteFromClipboard() {
+    if (!navigator.clipboard || !navigator.clipboard.read) {
+      showToast('Panoya erişilemiyor; Ctrl+V deneyin.');
+      return;
+    }
+    try {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const type = item.types.find((value) => value.startsWith('image/'));
+        if (type) {
+          const blob = await item.getType(type);
+          await handleScanFile(new File([blob], 'pano.png', { type }));
+          return;
+        }
+      }
+      showToast('Panoda görsel yok.');
+    } catch (error) {
+      showToast('Panoya erişilemiyor; Ctrl+V deneyin.');
+    }
+  }
+
+  function handlePaste(event) {
+    if (state.view !== 'scan') return;
+    const target = event.target;
+    if (target && target.closest && target.closest('input, textarea')) return;
+    const items = event.clipboardData && event.clipboardData.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) {
+          event.preventDefault();
+          handleScanFile(file);
+          return;
+        }
+      }
+    }
+  }
+
+  function initResult() {
+    $('#resultContent').addEventListener('click', handleResultClick);
+  }
+
+  async function handleResultClick(event) {
+    const button = event.target.closest('[data-action]');
+    if (!button) return;
+    const action = button.dataset.action;
+    if (action === 'copy') await copyText(state.result ? state.result.raw : '');
+    if (action === 'share') await shareText(state.result ? state.result.raw : '');
+    if (action === 'save-contact') await saveContactFromResult();
+    if (action === 'rescan') {
+      navigate('scan');
+      setTimeout(startCamera, 150);
+    }
+    if (action === 'copy-wifi') {
+      const password = state.result && state.result.wifi ? state.result.wifi.password : '';
+      if (password) await copyText(password);
+    }
+  }
+
+  async function saveContactFromResult() {
+    const result = state.result;
+    if (!result) return;
+    await saveContact({
+      name: result.name || (result.phone ? formatPhone(result.phone) : 'QrGen Kişisi'),
+      phone: result.phone,
+      url: result.url,
+      email: result.email,
+      org: result.org,
+      title: result.title
+    });
+  }
+
+  async function copyText(text) {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast('Kopyalandı.');
+    } catch (error) {
+      showToast('Kopyalanamadı.');
+    }
+  }
+
+  async function shareText(text) {
+    if (!text) return;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'QrGen', text });
+        return;
+      } catch (error) {
+        if (error.name === 'AbortError') return;
+      }
+    }
+    await copyText(text);
+  }
+
+  function parseContent(raw) {
+    const text = String(raw || '').trim();
+    if (!text) return { type: 'text', raw: text };
+    if (/^BEGIN:VCARD/i.test(text)) return parseVCard(text);
+    if (/^WIFI:/i.test(text)) return parseWifi(text);
+    if (/^SMSTO:/i.test(text)) return parseSms(text);
+    if (/^mailto:/i.test(text)) return parseMailto(text);
+    if (/^tel:/i.test(text)) {
+      const phone = normalizePhone(text.slice(4));
+      return phone ? { type: 'phone', phone, raw: text } : { type: 'text', raw: text };
+    }
+    if (/^geo:/i.test(text)) return { type: 'geo', geo: text, raw: text };
+    const url = extractUrl(text);
+    const phone = extractPhone(text);
+    const emailMatch = text.match(/[^\s@]+@[^\s@]+\.[^\s@]{2,}/);
+    const email = emailMatch ? emailMatch[0] : null;
+    if (url && phone) return { type: 'mixed', url, phone, raw: text };
+    if (url) return { type: 'url', url, raw: text };
+    if (phone) return { type: 'phone', phone, raw: text };
+    if (email) return { type: 'email', email, raw: text };
+    return { type: 'text', raw: text };
+  }
+
+  function parseVCard(text) {
+    const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+    const unfolded = [];
+    for (const line of lines) {
+      if (/^[ \t]/.test(line) && unfolded.length) unfolded[unfolded.length - 1] += line.slice(1);
+      else unfolded.push(line);
+    }
+    const fields = {};
+    for (const line of unfolded) {
+      const index = line.indexOf(':');
+      if (index < 0) continue;
+      const key = line.slice(0, index).split(';')[0].trim().toUpperCase();
+      const value = line.slice(index + 1).trim();
+      if (!key) continue;
+      if (!fields[key]) fields[key] = [];
+      fields[key].push(value);
+    }
+    const rawPhone = fields.TEL && fields.TEL.find(Boolean);
+    const rawUrl = fields.URL && fields.URL.find(Boolean);
+    return {
+      type: 'vcard',
+      name: decodeVCard((fields.FN && fields.FN[0]) || (fields.N && fields.N[0]) || ''),
+      phone: rawPhone ? normalizePhone(rawPhone) : null,
+      url: rawUrl ? normalizeUrl(rawUrl) : null,
+      email: fields.EMAIL && fields.EMAIL[0] ? fields.EMAIL[0] : null,
+      org: decodeVCard((fields.ORG && fields.ORG[0]) || ''),
+      title: decodeVCard((fields.TITLE && fields.TITLE[0]) || ''),
+      raw: text
+    };
+  }
+
+  function parseWifi(text) {
+    const body = text.replace(/^WIFI:/i, '');
+    const parts = [];
+    let current = '';
+    let escaped = false;
+    for (const character of body) {
+      if (escaped) {
+        current += character;
+        escaped = false;
+        continue;
+      }
+      if (character === '\\') {
+        escaped = true;
+        current += character;
+        continue;
+      }
+      if (character === ';') {
+        parts.push(current);
+        current = '';
+        continue;
+      }
+      current += character;
+    }
+    if (current) parts.push(current);
+    const map = {};
+    for (const part of parts) {
+      const index = part.indexOf(':');
+      if (index > 0) map[part.slice(0, index).trim().toUpperCase()] = part.slice(index + 1);
+    }
+    return {
+      type: 'wifi',
+      wifi: {
+        ssid: decodeWifi(map.S || ''),
+        password: decodeWifi(map.P || ''),
+        encryption: (map.T || 'nopass').toUpperCase(),
+        hidden: String(map.H || '').toLowerCase() === 'true'
+      },
+      raw: text
+    };
+  }
+
+  function parseSms(text) {
+    const body = text.replace(/^SMSTO:/i, '');
+    const index = body.indexOf(':');
+    const phone = normalizePhone(index >= 0 ? body.slice(0, index) : body);
+    return {
+      type: 'sms',
+      phone,
+      smsBody: index >= 0 ? body.slice(index + 1) : '',
+      raw: text
+    };
+  }
+
+  function parseMailto(text) {
+    try {
+      const url = new URL(text);
+      return {
+        type: 'email',
+        email: decodeURIComponent(url.pathname),
+        subject: url.searchParams.get('subject') || '',
+        body: url.searchParams.get('body') || '',
+        raw: text
+      };
+    } catch (error) {
+      return { type: 'email', email: text.replace(/^mailto:/i, ''), subject: '', body: '', raw: text };
+    }
+  }
+
+  function renderResult(parsed) {
+    const label = TYPE_LABELS[parsed.type] || 'Metin';
+    const actionHtml = buildResultActions(parsed);
+    const detailsHtml = buildResultDetails(parsed);
+    $('#resultContent').innerHTML = `
+      <div class="result-page">
+        <div class="result-head">
+          <div>
+            <span class="eyebrow">Tarama sonucu</span>
+            <h2>${escapeHtml(label)}</h2>
+          </div>
+          <span class="badge">${escapeHtml(label)}</span>
+        </div>
+        <div class="result-card">${detailsHtml}</div>
+        ${actionHtml}
+        <div class="result-card">
+          <details class="raw-details">
+            <summary>Ham içerik</summary>
+            <div class="raw-box">${escapeHtml(parsed.raw)}</div>
+          </details>
+          <div class="privacy-note">
+            ${icon('lock')}
+            <span>Bu içerik cihazında işlendi. Hiçbir görsel veya metin sunucuya gönderilmedi.</span>
+          </div>
+        </div>
+        <button class="rescan" type="button" data-action="rescan">
+          ${icon('camera')} Yeniden tara
+        </button>
+      </div>
+    `;
+  }
+
+  function buildResultDetails(parsed) {
+    if (parsed.type === 'url') {
+      return siteCard('link', hostOf(parsed.url), parsed.url);
+    }
+    if (parsed.type === 'phone') {
+      return siteCard('phone', formatPhone(parsed.phone), 'Telefon numarası');
+    }
+    if (parsed.type === 'email') {
+      const rows = [row('E-posta', parsed.email)];
+      if (parsed.subject) rows.push(row('Konu', parsed.subject));
+      if (parsed.body) rows.push(row('Mesaj', parsed.body));
+      return `<div class="result-rows">${rows.join('')}</div>`;
+    }
+    if (parsed.type === 'sms') {
+      const rows = [row('Telefon', formatPhone(parsed.phone))];
+      if (parsed.smsBody) rows.push(row('Mesaj', parsed.smsBody));
+      return `<div class="result-rows">${rows.join('')}</div>`;
+    }
+    if (parsed.type === 'wifi') {
+      const rows = [row('Ağ', parsed.wifi.ssid)];
+      rows.push(row('Güvenlik', parsed.wifi.encryption === 'NOPASS' ? 'Şifresiz' : parsed.wifi.encryption));
+      if (parsed.wifi.password) rows.push(row('Şifre', parsed.wifi.password));
+      if (parsed.wifi.hidden) rows.push(row('Gizli ağ', 'Evet'));
+      return `<div class="result-rows">${rows.join('')}</div>`;
+    }
+    if (parsed.type === 'geo') {
+      return `<div class="result-rows">${row('Konum', parsed.geo)}</div>`;
+    }
+    if (parsed.type === 'text') {
+      return `<div class="result-rows">${row('İçerik', parsed.raw)}</div>`;
+    }
+    const rows = [];
+    if (parsed.name) rows.push(row('Ad', parsed.name));
+    if (parsed.org) rows.push(row('Şirket', parsed.org));
+    if (parsed.title) rows.push(row('Ünvan', parsed.title));
+    if (parsed.phone) rows.push(row('Telefon', formatPhone(parsed.phone)));
+    if (parsed.email) rows.push(row('E-posta', parsed.email));
+    if (parsed.url) rows.push(row('Site', parsed.url));
+    return `<div class="result-rows">${rows.join('')}</div>`;
+  }
+
+  function siteCard(iconName, title, subtitle) {
+    return `
+      <div class="result-site">
+        <div class="result-icon">${icon(iconName)}</div>
+        <div class="result-site-copy">
+          <strong>${escapeHtml(title)}</strong>
+          <span>${escapeHtml(subtitle)}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  function row(label, value) {
+    return `<div class="result-row"><span class="result-label">${escapeHtml(label)}</span><span class="result-value">${escapeHtml(value)}</span></div>`;
+  }
+
+  function buildResultActions(parsed) {
+    const parts = [];
+    if (parsed.url) {
+      parts.push(`<a class="btn-primary btn-full" href="${escapeAttr(parsed.url)}" target="_blank" rel="noopener noreferrer">${icon('external')} Siteyi aç</a>`);
+    }
+    if (parsed.phone) {
+      parts.push(`
+        <div class="quick-grid">
+          <a class="quick-action primary" href="${escapeAttr('tel:' + parsed.phone)}">${icon('phone')}<strong>Ara</strong></a>
+          <a class="quick-action" href="${escapeAttr('sms:' + parsed.phone)}">${icon('message')}<strong>SMS at</strong></a>
+          <a class="quick-action wa wide" href="${escapeAttr(waLink(parsed.phone))}" target="_blank" rel="noopener noreferrer">${iconWhatsApp()}<strong>WhatsApp</strong></a>
+          <button class="quick-action save wide" type="button" data-action="save-contact">${icon('user-plus')}<strong>Rehbere kaydet</strong></button>
+        </div>
+      `);
+    }
+    if (parsed.email) {
+      parts.push(`<a class="btn-soft btn-full" href="mailto:${escapeAttr(parsed.email)}">${icon('mail')} E-posta gönder</a>`);
+    }
+    if (parsed.type === 'wifi') {
+      if (parsed.wifi.password) {
+        parts.push(`<button class="btn-soft btn-full" type="button" data-action="copy-wifi">${icon('copy')} Şifreyi kopyala</button>`);
+      }
+    }
+    parts.push(`
+      <div class="btn-row">
+        <button class="btn-soft" type="button" data-action="copy">${icon('copy')} Kopyala</button>
+        <button class="btn-soft" type="button" data-action="share">${icon('share')} Paylaş</button>
+      </div>
+    `);
+    return parts.join('');
+  }
+
+  function hostOf(url) {
+    try {
+      return new URL(url).hostname.replace(/^www\./, '');
+    } catch (error) {
+      return url;
+    }
+  }
+
+  function normalizeUrl(value) {
+    if (!value) return null;
+    let candidate = String(value).trim();
+    if (!candidate) return null;
+    if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(candidate)) {
+      candidate = 'https://' + candidate.replace(/^\/+/, '');
+    }
+    try {
+      const url = new URL(candidate);
+      if (!url.hostname || (url.hostname.indexOf('.') === -1 && url.hostname !== 'localhost')) return null;
+      return url.href;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function normalizePhone(value) {
+    if (!value) return null;
+    let phone = String(value).replace(/[^\d+]/g, '');
+    if (phone.startsWith('00')) phone = '+' + phone.slice(2);
+    if (phone.startsWith('+')) {
+      const digits = phone.slice(1);
+      return digits.length >= 7 && digits.length <= 15 ? '+' + digits : null;
+    }
+    return phone.length >= 7 && phone.length <= 15 ? phone : null;
+  }
+
+  function formatPhone(phone) {
+    if (!phone) return '';
+    if (/^\+90\d{10}$/.test(phone)) {
+      return '+90 ' + phone.slice(3, 6) + ' ' + phone.slice(6, 9) + ' ' + phone.slice(9, 11) + ' ' + phone.slice(11);
+    }
+    return phone;
+  }
+
+  function waLink(phone) {
+    const digits = String(phone).replace(/\D/g, '');
+    return 'https://wa.me/' + digits + '?text=' + encodeURIComponent(WHATSAPP_TEXT);
+  }
+
+  function isEmail(value) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(value || '').trim());
+  }
+
+  function extractUrl(text) {
+    const match = text.match(/\b((?:https?:\/\/|www\.)[^\s<>"']+|(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s<>"']*)?)/i);
+    if (!match) return null;
+    return normalizeUrl(match[1].replace(/[),.;]+$/, ''));
+  }
+
+  function extractPhone(text) {
+    const match = text.match(/(?:\+?\d[\d\s().-]{5,}\d)/);
+    if (!match) return null;
+    return normalizePhone(match[0]);
+  }
+
+  function escapeWifi(value) {
+    return String(value).replace(/([\\;,:"])/g, '\\$1');
+  }
+
+  function decodeWifi(value) {
+    return String(value).replace(/\\([\\;,:"])/g, '$1');
+  }
+
+  function decodeVCard(value) {
+    return String(value)
+      .replace(/\\n/gi, '\n')
+      .replace(/\\,/g, ',')
+      .replace(/\\;/g, ';')
+      .replace(/\\\\/g, '\\')
+      .trim();
+  }
+
+  function escapeVCard(value) {
+    return String(value || '')
+      .replace(/\\/g, '\\\\')
+      .replace(/\r?\n/g, '\\n')
+      .replace(/;/g, '\\;')
+      .replace(/,/g, '\\,');
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function escapeAttr(value) {
+    return escapeHtml(value);
+  }
+
+  function shorten(value, length) {
+    const text = String(value || '');
+    return text.length > length ? text.slice(0, length - 1) + '…' : text;
+  }
+
+  function icon(name) {
+    return '<svg class="ic" aria-hidden="true"><use href="#i-' + name + '"></use></svg>';
+  }
+
+  function iconWhatsApp() {
+    return '<svg class="ic wa" aria-hidden="true"><use href="#i-whatsapp"></use></svg>';
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
+
+  function setLoading(visible) {
+    $('#loadingOverlay').hidden = !visible;
+  }
+
+  function showToast(message) {
+    const container = $('#toasts');
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = message;
+    container.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('show'));
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 220);
+    }, 2600);
+  }
+
+  function debounce(callback, wait) {
+    let timer;
+    return function () {
+      const args = arguments;
+      clearTimeout(timer);
+      timer = setTimeout(() => callback.apply(null, args), wait);
+    };
+  }
+
+  function registerServiceWorker() {
+    if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+  }
+})();

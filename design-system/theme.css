@@ -1,0 +1,62 @@
+@font-face {
+  font-family: 'Rubik';
+  src: url('../vendor/Rubik.ttf') format('truetype');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  --primary: #5a4ad8;
+  --primary-2: #6a59e8;
+  --primary-soft: #ece9fc;
+  --ice: #2f79a4;
+  --scaffold: #eaf2fa;
+  --surface: #ffffff;
+  --surface-2: #f3f8fd;
+  --surface-3: #e7f1fa;
+  --border: #d7e5f1;
+  --border-2: #c3d8e8;
+  --txt: #234d6c;
+  --text-2: #4c7493;
+  --text-3: #5c7c94;
+  --appbar: #ffffff;
+  --appbar-fg: #234d6c;
+  --btn-grad: linear-gradient(180deg, #6a59e8, #5a4ad8);
+  --red: #c22f43;
+  --success: #0c7a4d;
+  --wa: #128c4a;
+  --hover-soft: rgba(18, 34, 47, .06);
+  --shadow-card: 0 10px 26px rgba(30, 64, 92, .10), 0 2px 6px rgba(30, 64, 92, .05);
+  --shadow-soft: 0 16px 34px rgba(30, 64, 92, .12);
+  --glow-1: rgba(106, 89, 232, .16);
+  --glow-2: rgba(84, 173, 224, .18);
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  --primary: #8b80ff;
+  --primary-2: #6f63f6;
+  --primary-soft: rgba(111, 99, 246, .16);
+  --ice: #7fe4d8;
+  --scaffold: #0c1120;
+  --surface: #161d31;
+  --surface-2: #1d253d;
+  --surface-3: #253050;
+  --border: #263051;
+  --border-2: #323d63;
+  --txt: #eef1f8;
+  --text-2: #a2abc8;
+  --text-3: #8791b2;
+  --appbar: #161d31;
+  --appbar-fg: #eef1f8;
+  --btn-grad: linear-gradient(180deg, #6a59e8, #5443d6);
+  --red: #ff5b6b;
+  --success: #2fd27f;
+  --wa: #4ade80;
+  --hover-soft: rgba(255, 255, 255, .08);
+  --shadow-card: 0 14px 34px rgba(2, 5, 18, .38), 0 2px 8px rgba(2, 5, 18, .22);
+  --shadow-soft: 0 18px 40px rgba(2, 5, 18, .45);
+  --glow-1: rgba(111, 99, 246, .18);
+  --glow-2: rgba(84, 173, 224, .11);
+  color-scheme: dark;
+}

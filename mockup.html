@@ -1,0 +1,1800 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>QrGen — UI Mockup</title>
+  <script>
+    (() => {
+      const requested = new URLSearchParams(window.location.search).get('theme');
+      const dark = requested === 'dark' || (requested !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      if (dark) document.documentElement.dataset.theme = 'dark';
+    })();
+  </script>
+  <style>
+    @font-face {
+      font-family: 'Rubik';
+      src: url('vendor/Rubik.ttf') format('truetype');
+      font-weight: 100 900;
+      font-display: swap;
+    }
+
+    :root {
+      --primary: #5a4ad8;
+      --primary-2: #6a59e8;
+      --primary-soft: #ece9fc;
+      --ice: #2f79a4;
+      --scaffold: #eaf2fa;
+      --surface: #ffffff;
+      --surface-2: #f3f8fd;
+      --surface-3: #e7f1fa;
+      --border: #d7e5f1;
+      --border-2: #c3d8e8;
+      --txt: #234d6c;
+      --text-2: #4c7493;
+      --text-3: #5c7c94;
+      --appbar: #ffffff;
+      --appbar-fg: #234d6c;
+      --btn-grad: linear-gradient(180deg, #6a59e8, #5a4ad8);
+      --red: #c22f43;
+      --success: #0c7a4d;
+      --hover-soft: rgba(18, 34, 47, .06);
+      --shadow-card: 0 10px 26px rgba(30, 64, 92, .10), 0 2px 6px rgba(30, 64, 92, .05);
+      --shadow-soft: 0 16px 34px rgba(30, 64, 92, .12);
+      --phone-shell: #0b1020;
+      --board-glow-1: rgba(106, 89, 232, .16);
+      --board-glow-2: rgba(84, 173, 224, .18);
+    }
+
+    html[data-theme="dark"] {
+      --primary: #8b80ff;
+      --primary-2: #6f63f6;
+      --primary-soft: rgba(111, 99, 246, .16);
+      --ice: #7fe4d8;
+      --scaffold: #0c1120;
+      --surface: #161d31;
+      --surface-2: #1d253d;
+      --surface-3: #253050;
+      --border: #263051;
+      --border-2: #323d63;
+      --txt: #eef1f8;
+      --text-2: #a2abc8;
+      --text-3: #8791b2;
+      --appbar: #161d31;
+      --appbar-fg: #eef1f8;
+      --btn-grad: linear-gradient(180deg, #6a59e8, #5443d6);
+      --red: #ff5b6b;
+      --success: #2fd27f;
+      --hover-soft: rgba(255, 255, 255, .08);
+      --shadow-card: 0 14px 34px rgba(2, 5, 18, .38), 0 2px 8px rgba(2, 5, 18, .22);
+      --shadow-soft: 0 18px 40px rgba(2, 5, 18, .45);
+      --phone-shell: #050812;
+      --board-glow-1: rgba(111, 99, 246, .18);
+      --board-glow-2: rgba(84, 173, 224, .11);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    [hidden] { display: none !important; }
+
+    html { min-height: 100%; }
+
+    body {
+      min-height: 100vh;
+      font-family: 'Rubik', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      color: var(--txt);
+      background:
+        radial-gradient(900px 520px at 88% -8%, var(--board-glow-1), transparent 62%),
+        radial-gradient(900px 520px at -10% 108%, var(--board-glow-2), transparent 60%),
+        var(--scaffold);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button {
+      font: inherit;
+      color: inherit;
+      border: 0;
+      background: none;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button:focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+    }
+
+    .ic {
+      width: 20px;
+      height: 20px;
+      flex: 0 0 auto;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .sprite {
+      position: absolute;
+      width: 0;
+      height: 0;
+      overflow: hidden;
+    }
+
+    .board-head {
+      max-width: 1760px;
+      margin: 0 auto;
+      padding: 28px 28px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-mark {
+      width: 48px;
+      height: 48px;
+      border-radius: 15px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: var(--btn-grad);
+      box-shadow: var(--shadow-card);
+    }
+
+    .brand-mark .ic { width: 26px; height: 26px; stroke-width: 2; }
+    .brand h1 { font-size: 22px; line-height: 1.1; font-weight: 800; letter-spacing: -.025em; }
+    .brand p { margin-top: 3px; font-size: 12.5px; color: var(--text-2); }
+
+    .board-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-2);
+      font-size: 11.5px;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(30, 64, 92, .04);
+    }
+
+    .pill .ic { width: 14px; height: 14px; color: var(--primary); }
+    .pill-avatar { width: 18px; height: 18px; border-radius: 50%; display: block; object-fit: cover; }
+
+    .pill-link { text-decoration: none; transition: color .16s ease, border-color .16s ease; }
+    .pill-link:hover { color: var(--primary); border-color: var(--primary); }
+
+    .theme-status {
+      height: 44px;
+      padding: 0 14px;
+      border-radius: 999px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-2);
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 11.5px;
+      font-weight: 600;
+      white-space: nowrap;
+      box-shadow: var(--shadow-card);
+    }
+
+    .theme-status .ic { width: 16px; height: 16px; color: var(--primary); }
+    .theme-status .moon { display: none; }
+    html[data-theme="dark"] .theme-status .sun { display: none; }
+    html[data-theme="dark"] .theme-status .moon { display: block; }
+
+    .screens {
+      max-width: 1760px;
+      margin: 0 auto;
+      padding: 8px 28px 30px;
+      display: grid;
+      grid-template-columns: repeat(4, 390px);
+      justify-content: center;
+      gap: 28px;
+    }
+
+    .shot { width: 390px; }
+
+    .shot-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 4px 10px;
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: .065em;
+      text-transform: uppercase;
+      color: var(--text-2);
+    }
+
+    .shot-label > span {
+      display: grid;
+      place-items: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 8px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-size: 10px;
+      letter-spacing: 0;
+    }
+
+    .shot-sub {
+      margin-left: auto;
+      font-style: normal;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0;
+      text-transform: none;
+      color: var(--text-3);
+    }
+
+    .phone {
+      position: relative;
+      width: 390px;
+      height: 820px;
+      padding: 9px;
+      border-radius: 44px;
+      background: var(--phone-shell);
+      box-shadow:
+        0 34px 70px -24px rgba(17, 38, 64, .48),
+        0 8px 24px -10px rgba(17, 38, 64, .25),
+        inset 0 0 0 1px rgba(255, 255, 255, .10);
+    }
+
+    .phone::before {
+      content: '';
+      position: absolute;
+      z-index: 4;
+      top: 16px;
+      left: 50%;
+      width: 76px;
+      height: 20px;
+      transform: translateX(-50%);
+      border-radius: 0 0 14px 14px;
+      background: var(--phone-shell);
+    }
+
+    .phone-screen {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      border-radius: 35px;
+      background: var(--scaffold);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .statusbar {
+      position: relative;
+      z-index: 3;
+      flex: 0 0 auto;
+      height: 30px;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--appbar);
+      color: var(--text-2);
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: .01em;
+    }
+
+    .status-icons { display: flex; align-items: center; gap: 5px; }
+    .status-icons .ic { width: 12px; height: 12px; stroke-width: 2.2; }
+    .status-icons .battery { width: 15px; }
+
+    .appbar {
+      position: relative;
+      z-index: 2;
+      flex: 0 0 auto;
+      height: 56px;
+      padding: 0 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--appbar);
+      color: var(--appbar-fg);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgba(18, 34, 47, .05);
+    }
+
+    .appbar h2 {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      max-width: 230px;
+      font-size: 15.5px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .icon-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: var(--appbar-fg);
+      transition: background .16s ease, color .16s ease;
+    }
+
+    .icon-btn:hover { background: var(--hover-soft); color: var(--primary); }
+    .icon-btn .ic { width: 19px; height: 19px; }
+
+    .brand-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 11px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: var(--btn-grad);
+      box-shadow: 0 3px 8px rgba(90, 74, 216, .28);
+    }
+
+    .brand-btn .ic { width: 19px; height: 19px; stroke-width: 2; }
+    a.brand-btn { text-decoration: none; }
+    .ic.github { fill: currentColor; stroke: none; }
+
+    .bsy-btn {
+      width: 34px;
+      height: 34px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 3px 8px rgba(30, 64, 92, .18);
+      transition: transform .16s ease, filter .16s ease;
+    }
+
+    .bsy-btn img { width: 100%; height: 100%; display: block; object-fit: cover; }
+    .bsy-btn:hover { transform: translateY(-1px) scale(1.03); filter: brightness(1.05); }
+
+    a.brand-btn:focus-visible, a.bsy-btn:focus-visible, a.pill-link:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+    .screen-body {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      background-color: var(--scaffold);
+      background-image:
+        radial-gradient(380px 220px at 95% 0%, var(--board-glow-1), transparent 65%),
+        radial-gradient(320px 200px at 0% 100%, var(--board-glow-2), transparent 65%);
+    }
+
+    .home {
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 16px 14px;
+    }
+
+    .home-hero {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 17px;
+    }
+
+    .hero-card {
+      position: relative;
+      width: 246px;
+      height: 246px;
+      padding: 15px;
+      border-radius: 16px;
+      background: #fff;
+      border: 1px solid #1c1c1c;
+      box-shadow: 0 20px 44px -20px rgba(20, 40, 58, .5);
+    }
+
+    .qr-art { width: 100%; height: 100%; }
+    .qr-art svg { display: block; width: 100%; height: 100%; }
+
+    .corner {
+      position: absolute;
+      width: 29px;
+      height: 29px;
+      border: 3px solid var(--red);
+      pointer-events: none;
+    }
+
+    .corner.tl { top: 7px; left: 7px; border-right: 0; border-bottom: 0; border-radius: 4px 0 0 0; }
+    .corner.tr { top: 7px; right: 7px; border-left: 0; border-bottom: 0; border-radius: 0 4px 0 0; }
+    .corner.bl { bottom: 7px; left: 7px; border-right: 0; border-top: 0; border-radius: 0 0 0 4px; }
+    .corner.br { bottom: 7px; right: 7px; border-left: 0; border-top: 0; border-radius: 0 0 4px 0; }
+
+    .scan-sweep {
+      position: absolute;
+      left: 11px;
+      right: 11px;
+      top: 18px;
+      height: 3px;
+      border-radius: 3px;
+      background: linear-gradient(90deg, transparent, var(--red) 18%, var(--red) 82%, transparent);
+      box-shadow: 0 0 16px var(--red);
+      animation: sweep 3.4s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes sweep {
+      0%, 100% { top: 18px; }
+      50% { top: calc(100% - 22px); }
+    }
+
+    .hero-copy { text-align: center; max-width: 300px; }
+    .hero-copy h3 { font-size: 21px; line-height: 1.15; letter-spacing: -.02em; }
+    .hero-copy p { margin-top: 6px; font-size: 12px; line-height: 1.5; color: var(--text-2); }
+
+    .home-actions { display: flex; flex-direction: column; gap: 10px; }
+
+    .action-btn {
+      width: 100%;
+      min-height: 61px;
+      padding: 11px 13px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      text-align: left;
+      transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
+    }
+
+    .action-btn:hover { transform: translateY(-1px); filter: brightness(1.03); }
+    .action-btn:active { transform: translateY(0) scale(.995); }
+
+    .action-btn.primary {
+      color: #fff;
+      background: var(--btn-grad);
+      box-shadow: 0 10px 22px -10px rgba(90, 74, 216, .65);
+    }
+
+    .action-btn.secondary {
+      color: var(--txt);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-card);
+    }
+
+    .action-icon {
+      width: 38px;
+      height: 38px;
+      flex: 0 0 auto;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+    }
+
+    .action-btn.primary .action-icon { background: rgba(255, 255, 255, .16); color: #fff; }
+    .action-btn.secondary .action-icon { background: var(--primary-soft); color: var(--primary); }
+    .action-icon .ic { width: 20px; height: 20px; }
+    .action-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .action-text strong { font-size: 13.5px; font-weight: 700; }
+    .action-text small { font-size: 10.5px; opacity: .72; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .action-btn .chevron { margin-left: auto; width: 16px; height: 16px; opacity: .7; }
+
+    .home-foot {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 10px;
+      color: var(--text-3);
+    }
+
+    .home-foot .ic { width: 12px; height: 12px; }
+
+    .create {
+      gap: 9px;
+      padding: 13px 14px 15px;
+      overflow-y: auto;
+    }
+
+    .eyebrow {
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+      color: var(--text-3);
+    }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+    .chip {
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-2);
+      font-size: 11px;
+      font-weight: 600;
+      transition: background .16s ease, color .16s ease, border-color .16s ease;
+    }
+
+    .chip.active {
+      color: var(--primary);
+      border-color: var(--primary);
+      background: var(--primary-soft);
+    }
+
+    .panel {
+      padding: 11px 12px;
+      border-radius: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-card);
+    }
+
+    .field-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 7px;
+      border-radius: 999px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-size: 8.5px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .badge.green { background: rgba(12, 122, 77, .11); color: var(--success); }
+    html[data-theme="dark"] .badge.green { background: rgba(47, 210, 127, .12); }
+
+    .input-mock {
+      height: 38px;
+      padding: 0 11px;
+      display: flex;
+      align-items: center;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--txt);
+      font-size: 11.5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .option-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .option-group { display: flex; flex-direction: column; gap: 6px; }
+    .swatches { display: flex; gap: 6px; }
+
+    .swatch {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid var(--surface);
+      box-shadow: 0 0 0 1px var(--border);
+    }
+
+    .swatch.s1 { background: #5a4ad8; }
+    .swatch.s2 { background: #18202f; }
+    .swatch.s3 { background: #167d74; }
+    .swatch.s4 { background: #c22f43; }
+    .swatch.active { box-shadow: 0 0 0 2px var(--primary); }
+
+    .mini-btn {
+      min-height: 31px;
+      padding: 6px 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border-radius: 9px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text-2);
+      font-size: 9.5px;
+      font-weight: 600;
+    }
+
+    .mini-btn .ic { width: 13px; height: 13px; }
+    .option-actions { display: flex; gap: 6px; }
+
+    .preview-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+    .preview-body { display: flex; align-items: center; gap: 12px; margin-top: 9px; }
+
+    .qr-preview {
+      position: relative;
+      width: 108px;
+      height: 108px;
+      flex: 0 0 auto;
+      padding: 8px;
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: inset 0 0 0 1px rgba(20, 40, 58, .08);
+    }
+
+    .preview-meta { min-width: 0; }
+    .preview-meta strong { font-size: 12.5px; }
+    .preview-meta p { margin-top: 2px; font-size: 10px; line-height: 1.35; color: var(--text-2); word-break: break-all; }
+    .hint { display: block; margin-top: 7px; font-size: 9px; color: var(--text-3); line-height: 1.35; }
+
+    .dl-row { display: flex; align-items: center; gap: 7px; }
+
+    .btn-primary {
+      flex: 1;
+      min-height: 46px;
+      padding: 0 13px;
+      border-radius: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      background: var(--btn-grad);
+      color: #fff;
+      font-size: 12.5px;
+      font-weight: 700;
+      box-shadow: 0 10px 22px -10px rgba(90, 74, 216, .65);
+      transition: filter .16s ease, transform .16s ease;
+    }
+
+    .btn-primary:hover { filter: brightness(1.06); }
+    .btn-primary:active { transform: scale(.995); }
+    .btn-primary .ic { width: 17px; height: 17px; }
+
+    .icon-square {
+      width: 46px;
+      height: 46px;
+      flex: 0 0 auto;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-2);
+      box-shadow: 0 2px 8px rgba(30, 64, 92, .05);
+    }
+
+    .icon-square .ic { width: 17px; height: 17px; }
+    .icon-square:hover { color: var(--primary); }
+
+    .scan { gap: 9px; padding: 12px; }
+
+    .camera-stage {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, .10);
+      background:
+        radial-gradient(280px 260px at 24% 16%, rgba(106, 89, 232, .42), transparent 60%),
+        radial-gradient(320px 260px at 84% 82%, rgba(84, 173, 224, .28), transparent 62%),
+        linear-gradient(145deg, #243054 0%, #111a31 48%, #070c18 100%);
+      cursor: crosshair;
+      box-shadow: inset 0 0 80px rgba(2, 5, 18, .55);
+    }
+
+    .camera-stage::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, .035) 0 1px, transparent 1px 42px),
+        repeating-linear-gradient(0deg, rgba(255, 255, 255, .035) 0 1px, transparent 1px 42px);
+      opacity: .65;
+      pointer-events: none;
+    }
+
+    .camera-hud {
+      position: absolute;
+      z-index: 4;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .hud-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, .16);
+      background: rgba(8, 13, 26, .56);
+      color: #fff;
+      font-size: 9.5px;
+      font-weight: 600;
+      backdrop-filter: blur(12px);
+    }
+
+    .hud-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 8px rgba(74, 222, 128, .8); }
+    .hud-actions { display: flex; gap: 6px; }
+
+    .cam-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, .16);
+      background: rgba(8, 13, 26, .56);
+      color: #fff;
+      backdrop-filter: blur(12px);
+      transition: background .16s ease, border-color .16s ease;
+    }
+
+    .cam-btn .ic { width: 17px; height: 17px; }
+    .cam-btn.active { background: var(--primary); border-color: var(--primary); box-shadow: 0 0 0 3px rgba(139, 128, 255, .22); }
+
+    .scan-frame {
+      position: absolute;
+      z-index: 3;
+      left: 50%;
+      top: 46%;
+      width: 224px;
+      height: 224px;
+      transform: translate(-50%, -50%);
+    }
+
+    .frame-corner { position: absolute; width: 33px; height: 33px; border: 3px solid #fff; }
+    .frame-corner.tl { top: 0; left: 0; border-right: 0; border-bottom: 0; border-radius: 8px 0 0 0; }
+    .frame-corner.tr { top: 0; right: 0; border-left: 0; border-bottom: 0; border-radius: 0 8px 0 0; }
+    .frame-corner.bl { bottom: 0; left: 0; border-right: 0; border-top: 0; border-radius: 0 0 0 8px; }
+    .frame-corner.br { bottom: 0; right: 0; border-left: 0; border-top: 0; border-radius: 0 0 8px 0; }
+
+    .frame-line {
+      position: absolute;
+      left: 9px;
+      right: 9px;
+      top: 12px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #a99fff, #8b80ff, #a99fff, transparent);
+      box-shadow: 0 0 18px #8b80ff;
+      animation: sweep 3s ease-in-out infinite;
+    }
+
+    .focus-ring {
+      position: absolute;
+      z-index: 5;
+      left: 58%;
+      top: 42%;
+      width: 74px;
+      height: 74px;
+      transform: translate(-50%, -50%);
+      border: 1.5px solid rgba(255, 255, 255, .92);
+      border-radius: 50%;
+      pointer-events: none;
+      transition: left .16s ease, top .16s ease;
+    }
+
+    .focus-ring::before,
+    .focus-ring::after {
+      content: '';
+      position: absolute;
+      background: rgba(255, 255, 255, .92);
+    }
+
+    .focus-ring::before { left: 50%; top: -5px; width: 1px; height: 9px; }
+    .focus-ring::after { top: 50%; left: -5px; width: 9px; height: 1px; }
+
+    .focus-ring span {
+      position: absolute;
+      left: 50%;
+      top: calc(100% + 8px);
+      transform: translateX(-50%);
+      white-space: nowrap;
+      padding: 4px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, .16);
+      background: rgba(8, 13, 26, .65);
+      color: #fff;
+      font-size: 8.5px;
+      font-weight: 600;
+      backdrop-filter: blur(10px);
+    }
+
+    .focus-ring.focusing { animation: focusPulse .5s ease-out; }
+
+    @keyframes focusPulse {
+      0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, .55); }
+      100% { box-shadow: 0 0 0 16px rgba(255, 255, 255, 0); }
+    }
+
+    .zoom-chip {
+      position: absolute;
+      z-index: 4;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, .16);
+      background: rgba(8, 13, 26, .56);
+      color: #fff;
+      font-size: 9.5px;
+      font-weight: 600;
+      backdrop-filter: blur(12px);
+    }
+
+    .zoom-track { width: 34px; height: 2px; border-radius: 2px; background: rgba(255, 255, 255, .3); }
+    .zoom-track::after { content: ''; display: block; width: 17px; height: 2px; border-radius: 2px; background: #fff; }
+
+    .scan-hint { text-align: center; font-size: 10.5px; color: var(--text-2); }
+
+    .scan-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    .scan-action {
+      min-height: 44px;
+      padding: 0 11px;
+      border-radius: 13px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      transition: filter .16s ease, transform .16s ease;
+    }
+
+    .scan-action .ic { width: 16px; height: 16px; }
+    .scan-action.primary { background: var(--btn-grad); color: #fff; box-shadow: 0 8px 18px -10px rgba(90, 74, 216, .7); }
+    .scan-action.secondary { background: var(--surface); color: var(--txt); border: 1px solid var(--border); box-shadow: var(--shadow-card); }
+    .scan-action:hover { filter: brightness(1.04); transform: translateY(-1px); }
+
+    .support-note { text-align: center; font-size: 9px; line-height: 1.4; color: var(--text-3); }
+
+    .result { gap: 10px; padding: 14px; overflow-y: auto; }
+    .result-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .result-heading { display: flex; align-items: center; gap: 6px; }
+    .result-top strong { font-size: 12.5px; }
+    .result-time { font-size: 9.5px; color: var(--text-3); }
+
+    .result-panel { padding: 12px; border-radius: 16px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-card); }
+    .site-row { display: flex; align-items: center; gap: 10px; }
+
+    .site-icon {
+      width: 44px;
+      height: 44px;
+      flex: 0 0 auto;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      color: var(--primary);
+      background: var(--primary-soft);
+    }
+
+    .site-icon .ic { width: 21px; height: 21px; }
+    .site-copy { min-width: 0; }
+    .site-copy strong { display: block; font-size: 12.5px; }
+    .site-copy span { display: block; margin-top: 2px; font-size: 10px; color: var(--text-2); word-break: break-all; }
+    .site-row .icon-btn { margin-left: auto; width: 34px; height: 34px; }
+    .site-row .icon-btn .ic { width: 16px; height: 16px; }
+
+    .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    .quick-action {
+      min-height: 58px;
+      padding: 9px 10px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--txt);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-align: left;
+      box-shadow: 0 2px 8px rgba(30, 64, 92, .05);
+      transition: transform .16s ease, filter .16s ease, border-color .16s ease;
+    }
+
+    a.quick-action { text-decoration: none; }
+    a.quick-action:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+    .quick-action:hover { transform: translateY(-1px); filter: brightness(1.02); }
+    .quick-action:active { transform: scale(.995); }
+    .quick-action.primary { color: #fff; border-color: transparent; background: var(--btn-grad); box-shadow: 0 8px 18px -10px rgba(90, 74, 216, .7); }
+    .quick-action.wide { grid-column: 1 / -1; justify-content: center; }
+
+    .qa-icon {
+      width: 30px;
+      height: 30px;
+      flex: 0 0 auto;
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      background: var(--primary-soft);
+      color: var(--primary);
+    }
+
+    .quick-action.primary .qa-icon { background: rgba(255, 255, 255, .16); color: #fff; }
+    .qa-icon .ic { width: 16px; height: 16px; }
+    .qa-text { display: flex; align-items: center; min-width: 0; }
+    .qa-text strong { font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+
+    .quick-action.wa { border-color: rgba(37, 211, 102, .24); background: rgba(37, 211, 102, .07); }
+    .quick-action.wa .qa-icon { background: rgba(37, 211, 102, .12); color: #128c4a; }
+    html[data-theme="dark"] .quick-action.wa { background: rgba(37, 211, 102, .08); border-color: rgba(37, 211, 102, .24); }
+    html[data-theme="dark"] .quick-action.wa .qa-icon { color: #4ade80; }
+
+    .ic.wa { fill: currentColor; stroke: none; }
+
+    .raw-label { margin-top: 11px; }
+
+    .raw-box {
+      margin-top: 6px;
+      padding: 9px 10px;
+      border-radius: 10px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text-2);
+      font-family: ui-monospace, Consolas, 'Courier New', monospace;
+      font-size: 9.5px;
+      line-height: 1.5;
+      word-break: break-all;
+    }
+
+    .btn-full { width: 100%; }
+    .btn-primary.btn-full { flex: 0 0 auto; }
+    .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    .btn-soft {
+      min-height: 42px;
+      padding: 0 10px;
+      border-radius: 13px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--txt);
+      font-size: 11.5px;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(30, 64, 92, .05);
+    }
+
+    .btn-soft .ic { width: 15px; height: 15px; color: var(--text-2); }
+    .btn-soft:hover { color: var(--primary); }
+    .btn-soft:hover .ic { color: var(--primary); }
+
+    .privacy-note {
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+      padding: 0 2px;
+      color: var(--text-3);
+      font-size: 9px;
+      line-height: 1.45;
+    }
+
+    .privacy-note .ic { width: 13px; height: 13px; margin-top: 1px; }
+
+    .rescan {
+      margin-top: auto;
+      min-height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      color: var(--primary);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .rescan .ic { width: 15px; height: 15px; }
+
+    .desktop-section {
+      max-width: 1760px;
+      margin: 0 auto;
+      padding: 8px 28px 54px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 0 4px 12px;
+    }
+
+    .section-head h2 { font-size: 15px; letter-spacing: -.01em; }
+    .section-head p { font-size: 11px; color: var(--text-2); }
+
+    .desktop-frame {
+      overflow: hidden;
+      border-radius: 22px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .browser-bar {
+      height: 42px;
+      padding: 0 15px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .dots { display: flex; gap: 5px; }
+    .dots span { width: 8px; height: 8px; border-radius: 50%; background: var(--border-2); }
+
+    .url-bar {
+      flex: 1;
+      max-width: 440px;
+      margin: 0 auto;
+      height: 25px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      border-radius: 999px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-3);
+      font-size: 9.5px;
+    }
+
+    .url-bar .ic { width: 10px; height: 10px; }
+
+    .desktop-app {
+      background-color: var(--scaffold);
+      background-image:
+        radial-gradient(900px 420px at 88% -10%, var(--board-glow-1), transparent 62%),
+        radial-gradient(760px 420px at -8% 112%, var(--board-glow-2), transparent 62%);
+    }
+
+    .desktop-appbar {
+      height: 64px;
+      padding: 0 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      background: var(--appbar);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .desktop-appbar .brand { gap: 10px; }
+    .desktop-appbar .brand-mark { width: 36px; height: 36px; border-radius: 11px; }
+    .desktop-appbar .brand-mark .ic { width: 20px; height: 20px; }
+    .desktop-appbar .brand h2 { font-size: 15px; letter-spacing: -.02em; }
+    .desktop-appbar .brand p { font-size: 9.5px; }
+
+    .desktop-nav { display: flex; align-items: center; gap: 4px; }
+
+    .desktop-nav span {
+      padding: 8px 12px;
+      border-radius: 10px;
+      color: var(--text-2);
+      font-size: 10.5px;
+      font-weight: 600;
+    }
+
+    .desktop-nav .active { background: var(--primary-soft); color: var(--primary); }
+
+    .desktop-home {
+      display: grid;
+      grid-template-columns: 1.02fr .98fr;
+      align-items: center;
+      gap: clamp(30px, 5vw, 86px);
+      padding: 36px clamp(26px, 5vw, 76px) 30px;
+    }
+
+    .desktop-hero { display: flex; justify-content: center; }
+    .desktop-hero .hero-card { width: clamp(250px, 27vw, 350px); height: auto; aspect-ratio: 1; padding: clamp(16px, 2vw, 24px); }
+
+    .desktop-copy { max-width: 540px; }
+
+    .desktop-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--primary);
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      box-shadow: 0 2px 8px rgba(30, 64, 92, .04);
+    }
+
+    .desktop-eyebrow .ic { width: 13px; height: 13px; }
+
+    .desktop-copy h3 {
+      margin: 11px 0 9px;
+      font-size: clamp(28px, 3.2vw, 44px);
+      line-height: 1.06;
+      letter-spacing: -.04em;
+    }
+
+    .desktop-copy > p { max-width: 440px; font-size: clamp(12px, 1.05vw, 15px); line-height: 1.65; color: var(--text-2); }
+
+    .desktop-actions { display: flex; flex-direction: column; gap: 10px; max-width: 360px; margin-top: 20px; }
+
+    .feature-pills { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 17px; }
+
+    .feature-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 9px;
+      border-radius: 999px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-2);
+      font-size: 9.5px;
+      font-weight: 600;
+    }
+
+    .feature-pill .ic { width: 12px; height: 12px; color: var(--primary); }
+
+    .desktop-footer {
+      padding: 11px 16px;
+      text-align: center;
+      font-size: 9.5px;
+      color: var(--text-3);
+      border-top: 1px solid var(--border);
+    }
+
+    .mock-toast {
+      position: fixed;
+      z-index: 99;
+      left: 50%;
+      bottom: 22px;
+      transform: translate(-50%, 12px);
+      max-width: min(420px, calc(100vw - 28px));
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--txt);
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+      box-shadow: var(--shadow-soft);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s ease, transform .2s ease;
+    }
+
+    .mock-toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    @media (max-width: 1750px) {
+      .screens {
+        grid-template-columns: repeat(2, 390px);
+        max-width: 860px;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .screens { grid-template-columns: 390px; max-width: 440px; }
+      .desktop-home { grid-template-columns: 1fr; padding: 28px 22px; }
+      .desktop-hero .hero-card { width: min(300px, 70vw); }
+      .desktop-copy { max-width: none; }
+      .desktop-actions { max-width: none; }
+      .desktop-appbar { padding: 0 14px; }
+      .desktop-nav { display: none; }
+    }
+
+    @media (max-width: 450px) {
+      .board-head { padding: 20px 16px 12px; }
+      .brand h1 { font-size: 19px; }
+      .screens { padding: 4px 14px 24px; justify-content: start; overflow-x: auto; }
+      .shot { width: 390px; }
+      .section-head { align-items: flex-start; flex-direction: column; gap: 4px; }
+      .desktop-section { padding: 6px 14px 32px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .scan-sweep, .frame-line { animation: none; }
+      .focus-ring, .action-btn, .btn-primary, .scan-action { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <svg class="sprite" aria-hidden="true" focusable="false">
+    <symbol id="i-qr" viewBox="0 0 24 24">
+      <rect x="3.5" y="3.5" width="6" height="6" rx="1.2"/>
+      <rect x="14.5" y="3.5" width="6" height="6" rx="1.2"/>
+      <rect x="3.5" y="14.5" width="6" height="6" rx="1.2"/>
+      <path d="M14.5 14.5h2.2v2.2h-2.2zM18.5 14.5h2v2M14.5 20.5h2M18.5 18.5h2v2"/>
+    </symbol>
+    <symbol id="i-github" viewBox="0 0 24 24">
+      <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56 0-.28-.01-1.02-.02-2-3.2.7-3.88-1.54-3.88-1.54-.52-1.33-1.28-1.68-1.28-1.68-1.05-.72.08-.71.08-.71 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.23-1.28-5.23-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11.1 11.1 0 0 1 2.9-.39c.98 0 1.97.13 2.9.39 2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.69 5.39-5.25 5.68.41.36.78 1.06.78 2.14 0 1.54-.01 2.78-.01 3.16 0 .31.21.67.8.56A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"/>
+    </symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24">
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.68 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.32 1.85.55 2.81.68A2 2 0 0 1 22 16.92Z"/>
+    </symbol>
+    <symbol id="i-message" viewBox="0 0 24 24">
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/>
+    </symbol>
+    <symbol id="i-whatsapp" viewBox="0 0 448 512">
+      <path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/>
+    </symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24">
+      <path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/>
+      <circle cx="12" cy="13" r="3.2"/>
+    </symbol>
+    <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+    <symbol id="i-flash" viewBox="0 0 24 24"><path d="M13 2 5 14h6l-1 8 8-12h-6l1-8Z"/></symbol>
+    <symbol id="i-flip" viewBox="0 0 24 24">
+      <path d="M4 8h11a4 4 0 0 1 0 8h-1"/>
+      <path d="m7 5-3 3 3 3"/>
+      <path d="M20 16H9a4 4 0 0 1 0-8h1"/>
+      <path d="m17 13 3 3-3 3"/>
+    </symbol>
+    <symbol id="i-image" viewBox="0 0 24 24">
+      <rect x="3" y="4" width="18" height="16" rx="2"/>
+      <circle cx="8.5" cy="9.5" r="1.5"/>
+      <path d="m21 15-5-5L5 20"/>
+    </symbol>
+    <symbol id="i-focus" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M4 9V6a2 2 0 0 1 2-2h3M15 4h3a2 2 0 0 1 2 2v3M20 15v3a2 2 0 0 1-2 2h-3M9 20H6a2 2 0 0 1-2-2v-3"/>
+    </symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24">
+      <rect x="5" y="10" width="14" height="10" rx="2"/>
+      <path d="M8 10V7a4 4 0 0 1 8 0v3"/>
+    </symbol>
+    <symbol id="i-external" viewBox="0 0 24 24">
+      <path d="M14 4h6v6M20 4l-9 9"/>
+      <path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/>
+    </symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24">
+      <rect x="8" y="8" width="12" height="12" rx="2"/>
+      <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>
+    </symbol>
+    <symbol id="i-share" viewBox="0 0 24 24">
+      <circle cx="18" cy="5" r="2.5"/>
+      <circle cx="6" cy="12" r="2.5"/>
+      <circle cx="18" cy="19" r="2.5"/>
+      <path d="m8.2 10.8 7.6-4.6M8.2 13.2l7.6 4.6"/>
+    </symbol>
+    <symbol id="i-download" viewBox="0 0 24 24">
+      <path d="M12 3v11M7 10l5 5 5-5"/>
+      <path d="M4 20h16"/>
+    </symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>
+    </symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5Z"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-wifi" viewBox="0 0 24 24">
+      <path d="M3 9a15 15 0 0 1 18 0M6.5 12.5a10 10 0 0 1 11 0M10 16a5 5 0 0 1 4 0"/>
+      <circle cx="12" cy="19" r="1"/>
+    </symbol>
+    <symbol id="i-link" viewBox="0 0 24 24">
+      <path d="M10 13a5 5 0 0 0 7.07 0l1.42-1.42a5 5 0 0 0-7.07-7.07L10 5.93"/>
+      <path d="M14 11a5 5 0 0 0-7.07 0L5.5 12.4a5 5 0 0 0 7.07 7.07L14 18.1"/>
+    </symbol>
+    <symbol id="i-resize" viewBox="0 0 24 24"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M21 16v5h-5"/></symbol>
+    <symbol id="i-battery" viewBox="0 0 24 24"><rect x="3" y="7" width="16" height="10" rx="2"/><path d="M21 10v4"/></symbol>
+    <symbol id="i-signal" viewBox="0 0 24 24"><path d="M4 20v-3M9 20v-7M14 20V9M19 20V5"/></symbol>
+  </svg>
+
+  <header class="board-head">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg class="ic"><use href="#i-qr"/></svg>
+      </div>
+      <div>
+        <h1>QrGen Web</h1>
+        <p>UI mockup · textrecweb teması uyarlaması</p>
+      </div>
+    </div>
+    <div class="board-actions">
+      <a class="pill pill-link" href="https://batuhansavas-yilmaz.github.io/frombsy/" target="_blank" rel="noopener noreferrer">
+        <img class="pill-avatar" src="assets/frombsy-button.png" alt=""> From B.S.Y.
+      </a>
+      <span class="pill"><svg class="ic"><use href="#i-focus"/></svg> flaş + dokunarak odak</span>
+      <span class="pill"><svg class="ic"><use href="#i-qr"/></svg> QR üret + tara</span>
+      <span class="theme-status">
+        <svg class="ic sun"><use href="#i-sun"/></svg>
+        <svg class="ic moon"><use href="#i-moon"/></svg>
+        Sistem teması
+      </span>
+    </div>
+  </header>
+
+  <main>
+    <section class="screens" aria-label="Mobil ekran mockupları">
+      <article class="shot">
+        <div class="shot-label"><span>01</span> Ana ekran <em class="shot-sub">mobil</em></div>
+        <div class="phone">
+          <div class="phone-screen">
+            <div class="statusbar">
+              <span>9:41</span>
+              <div class="status-icons">
+                <svg class="ic"><use href="#i-signal"/></svg>
+                <svg class="ic"><use href="#i-wifi"/></svg>
+                <svg class="ic battery"><use href="#i-battery"/></svg>
+              </div>
+            </div>
+            <div class="appbar">
+              <a class="bsy-btn" href="https://batuhansavas-yilmaz.github.io/frombsy/" target="_blank" rel="noopener noreferrer" aria-label="From B.S.Y." title="From B.S.Y.">
+                <img src="assets/frombsy-button.png" alt="">
+              </a>
+              <h2>Qr Oluştur ve Tara</h2>
+            </div>
+            <div class="screen-body home">
+              <div class="home-hero">
+                <div class="hero-card">
+                  <div class="qr-art" data-seed="7" role="img" aria-label="QR kod önizlemesi"></div>
+                  <span class="corner tl"></span>
+                  <span class="corner tr"></span>
+                  <span class="corner bl"></span>
+                  <span class="corner br"></span>
+                  <span class="scan-sweep"></span>
+                </div>
+                <div class="hero-copy">
+                  <h3>Oluştur, tara, paylaş.</h3>
+                  <p>QR kodlarını saniyeler içinde oluştur, kamerayla anında tara.</p>
+                </div>
+              </div>
+              <div class="home-actions">
+                <button class="action-btn primary" type="button" data-toast="QR Oluştur ekranı açılır">
+                  <span class="action-icon"><svg class="ic"><use href="#i-qr"/></svg></span>
+                  <span class="action-text"><strong>QR Oluştur</strong><small>Metin, URL, Wi-Fi, vCard</small></span>
+                  <svg class="ic chevron"><use href="#i-chevron"/></svg>
+                </button>
+                <button class="action-btn secondary" type="button" data-toast="Kamera tarama ekranı açılır">
+                  <span class="action-icon"><svg class="ic"><use href="#i-camera"/></svg></span>
+                  <span class="action-text"><strong>QR Tara</strong><small>Kamera, dosya veya pano</small></span>
+                  <svg class="ic chevron"><use href="#i-chevron"/></svg>
+                </button>
+              </div>
+              <div class="home-foot">
+                <svg class="ic"><use href="#i-lock"/></svg>
+                Tüm işlemler cihazında · reklamsız
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="shot">
+        <div class="shot-label"><span>02</span> QR oluştur <em class="shot-sub">canlı önizleme</em></div>
+        <div class="phone">
+          <div class="phone-screen">
+            <div class="statusbar">
+              <span>9:41</span>
+              <div class="status-icons">
+                <svg class="ic"><use href="#i-signal"/></svg>
+                <svg class="ic"><use href="#i-wifi"/></svg>
+                <svg class="ic battery"><use href="#i-battery"/></svg>
+              </div>
+            </div>
+            <div class="appbar">
+              <button class="icon-btn" type="button" aria-label="Geri" data-toast="Ana ekrana dön">
+                <svg class="ic"><use href="#i-arrow-left"/></svg>
+              </button>
+              <h2>QR Oluştur</h2>
+            </div>
+            <div class="screen-body create">
+              <div class="chips" aria-label="İçerik türü">
+                <button class="chip active" type="button" data-toast="URL türü seçildi">URL</button>
+                <button class="chip" type="button" data-toast="Metin türü seçildi">Metin</button>
+                <button class="chip" type="button" data-toast="E-posta türü seçildi">E-posta</button>
+                <button class="chip" type="button" data-toast="Telefon türü seçildi">Telefon</button>
+                <button class="chip" type="button" data-toast="SMS türü seçildi">SMS</button>
+                <button class="chip" type="button" data-toast="Wi-Fi türü seçildi">Wi-Fi</button>
+                <button class="chip" type="button" data-toast="vCard türü seçildi">vCard</button>
+              </div>
+              <div class="panel">
+                <div class="field-head">
+                  <span class="eyebrow">İçerik</span>
+                  <span class="badge">URL</span>
+                </div>
+                <div class="input-mock">https://batuhansavas-yilmaz.github.io/qrgenweb/</div>
+              </div>
+              <div class="panel">
+                <div class="option-row">
+                  <div class="option-group">
+                    <span class="eyebrow">Renk</span>
+                    <div class="swatches">
+                      <span class="swatch s1 active"></span>
+                      <span class="swatch s2"></span>
+                      <span class="swatch s3"></span>
+                      <span class="swatch s4"></span>
+                    </div>
+                  </div>
+                  <div class="option-actions">
+                    <button class="mini-btn" type="button" data-toast="Logo yükleme">
+                      <svg class="ic"><use href="#i-image"/></svg> Logo
+                    </button>
+                    <button class="mini-btn" type="button" data-toast="Boyut seçimi: 1024 px">
+                      <svg class="ic"><use href="#i-resize"/></svg> 1024 px
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="panel">
+                <div class="preview-top">
+                  <span class="eyebrow">Canlı önizleme</span>
+                  <span class="badge green"><svg class="ic" style="width:9px;height:9px"><use href="#i-check"/></svg> H · Yüksek</span>
+                </div>
+                <div class="preview-body">
+                  <div class="qr-preview">
+                    <div class="qr-art" data-seed="18" role="img" aria-label="Renk ve logolu QR kod önizlemesi"></div>
+                  </div>
+                  <div class="preview-meta">
+                    <strong>qrgenweb</strong>
+                    <p>batuhansavas-yilmaz.github.io/qrgenweb</p>
+                    <span class="hint">Renk ve logo anında uygulanır. Yüksek hata düzeltme sayesinde logo güvenle eklenir.</span>
+                  </div>
+                </div>
+              </div>
+              <div class="dl-row">
+                <button class="btn-primary" type="button" data-toast="PNG indiriliyor (mockup)">
+                  <svg class="ic"><use href="#i-download"/></svg>
+                  PNG indir
+                </button>
+                <button class="icon-square" type="button" aria-label="SVG indir" data-toast="SVG indiriliyor (mockup)">
+                  <svg class="ic"><use href="#i-resize"/></svg>
+                </button>
+                <button class="icon-square" type="button" aria-label="Kopyala" data-toast="QR panoya kopyalandı (mockup)">
+                  <svg class="ic"><use href="#i-copy"/></svg>
+                </button>
+                <button class="icon-square" type="button" aria-label="Paylaş" data-toast="Paylaşım menüsü (mockup)">
+                  <svg class="ic"><use href="#i-share"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="shot">
+        <div class="shot-label"><span>03</span> QR tara <em class="shot-sub">flaş · odak · dosya</em></div>
+        <div class="phone">
+          <div class="phone-screen">
+            <div class="statusbar">
+              <span>9:41</span>
+              <div class="status-icons">
+                <svg class="ic"><use href="#i-signal"/></svg>
+                <svg class="ic"><use href="#i-wifi"/></svg>
+                <svg class="ic battery"><use href="#i-battery"/></svg>
+              </div>
+            </div>
+            <div class="appbar">
+              <button class="icon-btn" type="button" aria-label="Geri" data-toast="Ana ekrana dön">
+                <svg class="ic"><use href="#i-arrow-left"/></svg>
+              </button>
+              <h2>QR Tara</h2>
+            </div>
+            <div class="screen-body scan">
+              <div class="camera-stage" id="cameraStage">
+                <div class="camera-hud">
+                  <span class="hud-pill"><span class="dot"></span> Kamera açık</span>
+                  <div class="hud-actions">
+                    <button class="cam-btn active" type="button" aria-label="Flaşı kapat" data-flash>
+                      <svg class="ic"><use href="#i-flash"/></svg>
+                    </button>
+                    <button class="cam-btn" type="button" aria-label="Kamerayı çevir" data-toast="Kamera değiştirildi (mockup)">
+                      <svg class="ic"><use href="#i-flip"/></svg>
+                    </button>
+                  </div>
+                </div>
+                <div class="scan-frame">
+                  <span class="frame-corner tl"></span>
+                  <span class="frame-corner tr"></span>
+                  <span class="frame-corner bl"></span>
+                  <span class="frame-corner br"></span>
+                  <span class="frame-line"></span>
+                </div>
+                <div class="focus-ring" id="focusRing" hidden><span>Odaklandı</span></div>
+                <div class="zoom-chip"><span>1×</span><span class="zoom-track"></span><span>2×</span></div>
+              </div>
+              <p class="scan-hint">QR kodunu çerçeveye hizala · netleşmesi için dokun</p>
+              <div class="scan-actions">
+                <button class="scan-action primary" type="button" data-toast="Dosya seçici açılır (mockup)">
+                  <svg class="ic"><use href="#i-image"/></svg> Dosyadan oku
+                </button>
+                <button class="scan-action secondary" type="button" data-toast="Panodan görsel okunur (mockup)">
+                  <svg class="ic"><use href="#i-copy"/></svg> Panodan yapıştır
+                </button>
+              </div>
+              <p class="support-note">Görseli sürükle-bırak veya dosyadan seç. Flaş ve donanımsal odak, cihaz destekliyorsa etkinleşir.</p>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="shot">
+        <div class="shot-label"><span>04</span> Sonuç <em class="shot-sub">akıllı işlemler</em></div>
+        <div class="phone">
+          <div class="phone-screen">
+            <div class="statusbar">
+              <span>9:41</span>
+              <div class="status-icons">
+                <svg class="ic"><use href="#i-signal"/></svg>
+                <svg class="ic"><use href="#i-wifi"/></svg>
+                <svg class="ic battery"><use href="#i-battery"/></svg>
+              </div>
+            </div>
+            <div class="appbar">
+              <button class="icon-btn" type="button" aria-label="Geri" data-toast="Ana ekrana dön">
+                <svg class="ic"><use href="#i-arrow-left"/></svg>
+              </button>
+              <h2>Sonuç</h2>
+            </div>
+            <div class="screen-body result">
+              <div class="result-top">
+                <div class="result-heading">
+                  <strong>Tarama sonucu</strong>
+                  <span class="badge">Telefon</span>
+                </div>
+                <span class="result-time">az önce</span>
+              </div>
+              <div class="panel result-panel">
+                <div class="site-row">
+                  <span class="site-icon"><svg class="ic"><use href="#i-phone"/></svg></span>
+                  <div class="site-copy">
+                    <strong>+90 532 123 45 67</strong>
+                    <span>Telefon numarası · rehberde yok</span>
+                  </div>
+                  <button class="icon-btn" type="button" aria-label="Numarayı kopyala" data-toast="Numara kopyalandı (mockup)">
+                    <svg class="ic"><use href="#i-copy"/></svg>
+                  </button>
+                </div>
+                <span class="eyebrow raw-label">Ham içerik</span>
+                <div class="raw-box">tel:+905321234567</div>
+              </div>
+              <div class="quick-grid">
+                <a class="quick-action primary" href="tel:+905321234567">
+                  <span class="qa-icon"><svg class="ic"><use href="#i-phone"/></svg></span>
+                  <span class="qa-text"><strong>Ara</strong></span>
+                </a>
+                <a class="quick-action" href="sms:+905321234567">
+                  <span class="qa-icon"><svg class="ic"><use href="#i-message"/></svg></span>
+                  <span class="qa-text"><strong>SMS at</strong></span>
+                </a>
+                <a class="quick-action wa wide" href="https://wa.me/905321234567?text=Merhaba%2C%20QR%20kodu%20ile%20ula%C5%9F%C4%B1yorum." target="_blank" rel="noopener noreferrer">
+                  <span class="qa-icon"><svg class="ic wa"><use href="#i-whatsapp"/></svg></span>
+                  <span class="qa-text"><strong>WhatsApp mesaj</strong></span>
+                </a>
+              </div>
+              <div class="btn-row">
+                <button class="btn-soft" type="button" data-toast="İçerik kopyalandı (mockup)">
+                  <svg class="ic"><use href="#i-copy"/></svg> Kopyala
+                </button>
+                <button class="btn-soft" type="button" data-toast="Paylaşım menüsü (mockup)">
+                  <svg class="ic"><use href="#i-share"/></svg> Paylaş
+                </button>
+              </div>
+              <div class="privacy-note">
+                <svg class="ic"><use href="#i-lock"/></svg>
+                <span>Bu içerik cihazında işlendi. Hiçbir görsel veya metin sunucuya gönderilmedi.</span>
+              </div>
+              <button class="rescan" type="button" data-toast="Kamera yeniden açılır (mockup)">
+                <svg class="ic"><use href="#i-camera"/></svg>
+                Yeniden tara
+              </button>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="desktop-section" aria-label="Masaüstü mockup">
+      <div class="section-head">
+        <h2>Masaüstü görünümü</h2>
+        <p>textrecweb gibi geniş ekranda iki sütun: solda QR, sağda eylemler.</p>
+      </div>
+      <div class="desktop-frame">
+        <div class="browser-bar">
+          <div class="dots"><span></span><span></span><span></span></div>
+          <div class="url-bar">
+            <svg class="ic"><use href="#i-lock"/></svg>
+            batuhansavas-yilmaz.github.io/qrgenweb
+          </div>
+        </div>
+        <div class="desktop-app">
+          <div class="desktop-appbar">
+            <div class="brand">
+              <div class="brand-mark" aria-hidden="true">
+                <svg class="ic"><use href="#i-qr"/></svg>
+              </div>
+              <div>
+                <h2>QrGen</h2>
+                <p>Oluştur &amp; tara</p>
+              </div>
+            </div>
+            <nav class="desktop-nav" aria-label="Masaüstü menü">
+              <span class="active">Oluştur</span>
+              <span>Tara</span>
+            </nav>
+            <a class="bsy-btn" href="https://batuhansavas-yilmaz.github.io/frombsy/" target="_blank" rel="noopener noreferrer" aria-label="From B.S.Y." title="From B.S.Y.">
+              <img src="assets/frombsy-button.png" alt="">
+            </a>
+          </div>
+          <div class="desktop-home">
+            <div class="desktop-hero">
+              <div class="hero-card">
+                <div class="qr-art" data-seed="31" role="img" aria-label="Masaüstü QR kod önizlemesi"></div>
+                <span class="corner tl"></span>
+                <span class="corner tr"></span>
+                <span class="corner bl"></span>
+                <span class="corner br"></span>
+                <span class="scan-sweep"></span>
+              </div>
+            </div>
+            <div class="desktop-copy">
+              <span class="desktop-eyebrow"><svg class="ic"><use href="#i-qr"/></svg> QR, cihazında</span>
+              <h3>QR kodlarını saniyeler içinde oluştur, tara, paylaş.</h3>
+              <p>Metin, URL, Wi-Fi ve vCard kodları oluştur; kamerayla veya görselden anında tara. Reklamsız, ücretsiz ve tamamen tarayıcıda.</p>
+              <div class="desktop-actions">
+                <button class="action-btn primary" type="button" data-toast="QR Oluştur ekranı açılır">
+                  <span class="action-icon"><svg class="ic"><use href="#i-qr"/></svg></span>
+                  <span class="action-text"><strong>QR Oluştur</strong><small>Canlı önizleme, renk ve logo</small></span>
+                  <svg class="ic chevron"><use href="#i-chevron"/></svg>
+                </button>
+                <button class="action-btn secondary" type="button" data-toast="Kamera tarama ekranı açılır">
+                  <span class="action-icon"><svg class="ic"><use href="#i-camera"/></svg></span>
+                  <span class="action-text"><strong>QR Tara</strong><small>Kamera, dosya veya pano</small></span>
+                  <svg class="ic chevron"><use href="#i-chevron"/></svg>
+                </button>
+              </div>
+              <div class="feature-pills">
+                <span class="feature-pill"><svg class="ic"><use href="#i-lock"/></svg> Cihazda işlem</span>
+                <span class="feature-pill"><svg class="ic"><use href="#i-flash"/></svg> Flaş + odak</span>
+                <span class="feature-pill"><svg class="ic"><use href="#i-image"/></svg> Dosyadan tara</span>
+                <span class="feature-pill"><svg class="ic"><use href="#i-wifi"/></svg> Çevrimdışı</span>
+              </div>
+            </div>
+          </div>
+          <div class="desktop-footer">Tüm işlemler cihazında · reklamsız · ücretsiz · PWA olarak kurulabilir</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="mock-toast" id="mockToast" role="status" aria-live="polite"></div>
+
+  <script>
+    const root = document.documentElement;
+    const mockToast = document.getElementById('mockToast');
+    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
+    const requestedTheme = new URLSearchParams(window.location.search).get('theme');
+    let toastTimer;
+
+    function applyTheme() {
+      if (requestedTheme === 'dark' || requestedTheme === 'light') {
+        root.dataset.theme = requestedTheme;
+        return;
+      }
+      root.dataset.theme = systemTheme.matches ? 'dark' : 'light';
+    }
+
+    applyTheme();
+
+    if (!requestedTheme) {
+      if (systemTheme.addEventListener) systemTheme.addEventListener('change', applyTheme);
+      else systemTheme.addListener(applyTheme);
+    }
+
+    function showToast(message) {
+      mockToast.textContent = message;
+      mockToast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => mockToast.classList.remove('show'), 1900);
+    }
+
+    function createQr(seed) {
+      const n = 29;
+      let state = seed >>> 0;
+      const random = () => {
+        state = (state * 1664525 + 1013904223) >>> 0;
+        return state / 4294967296;
+      };
+      const parts = [`<rect width="${n}" height="${n}" fill="#fff"/>`];
+      const dark = (x, y, w = 1, h = 1) => {
+        parts.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#0b1020"/>`);
+      };
+      const reserved = (x, y) => {
+        if (x < 9 && y < 9) return true;
+        if (x >= n - 9 && y < 9) return true;
+        if (x < 9 && y >= n - 9) return true;
+        if (x === 6 || y === 6) return true;
+        if (x >= n - 9 && y >= n - 9) return true;
+        return false;
+      };
+      for (let y = 0; y < n; y += 1) {
+        for (let x = 0; x < n; x += 1) {
+          if (!reserved(x, y) && random() > 0.55) dark(x, y);
+        }
+      }
+      const finder = (x, y) => {
+        dark(x, y, 7, 7);
+        parts.push(`<rect x="${x + 1}" y="${y + 1}" width="5" height="5" fill="#fff"/>`);
+        dark(x + 2, y + 2, 3, 3);
+      };
+      finder(0, 0);
+      finder(n - 7, 0);
+      finder(0, n - 7);
+      for (let i = 8; i < n - 8; i += 1) {
+        if (i % 2 === 0) {
+          dark(6, i);
+          dark(i, 6);
+        }
+      }
+      const ax = n - 9;
+      const ay = n - 9;
+      dark(ax, ay, 5, 5);
+      parts.push(`<rect x="${ax + 1}" y="${ay + 1}" width="3" height="3" fill="#fff"/>`);
+      dark(ax + 2, ay + 2, 1, 1);
+      return `<svg viewBox="0 0 ${n} ${n}" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">${parts.join('')}</svg>`;
+    }
+
+    document.querySelectorAll('.qr-art').forEach((element) => {
+      element.innerHTML = createQr(Number(element.dataset.seed || 7));
+    });
+
+    const cameraStage = document.getElementById('cameraStage');
+    const focusRing = document.getElementById('focusRing');
+    let focusTimer;
+
+    cameraStage.addEventListener('click', (event) => {
+      if (event.target.closest('button')) return;
+      const rect = cameraStage.getBoundingClientRect();
+      focusRing.style.left = `${event.clientX - rect.left}px`;
+      focusRing.style.top = `${event.clientY - rect.top}px`;
+      focusRing.hidden = false;
+      focusRing.classList.remove('focusing');
+      void focusRing.offsetWidth;
+      focusRing.classList.add('focusing');
+      clearTimeout(focusTimer);
+      focusTimer = setTimeout(() => { focusRing.hidden = true; }, 1100);
+    });
+
+    document.querySelectorAll('[data-flash]').forEach((button) => {
+      button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        button.classList.toggle('active');
+        const active = button.classList.contains('active');
+        button.setAttribute('aria-label', active ? 'Flaşı kapat' : 'Flaşı aç');
+        showToast(active ? 'Flaş açık' : 'Flaş kapalı');
+      });
+    });
+
+    document.querySelectorAll('[data-toast]').forEach((element) => {
+      element.addEventListener('click', () => showToast(element.dataset.toast));
+    });
+  </script>
+</body>
+</html>
