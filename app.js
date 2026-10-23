@@ -474,7 +474,6 @@
       stopCamera();
       resetScanUi();
     });
-    $('#scanFileBtn').addEventListener('click', () => $('#scanFileInput').click());
     $('#scanFileInput').addEventListener('change', (event) => {
       const file = event.target.files && event.target.files[0];
       if (file) handleScanFile(file);
@@ -484,7 +483,6 @@
     $('#flashBtn').addEventListener('click', toggleTorch);
     $('#flipBtn').addEventListener('click', flipCamera);
     $('#zoomRange').addEventListener('input', applyZoom);
-    $('#dropZone').addEventListener('click', () => $('#scanFileInput').click());
     ['dragover', 'dragenter'].forEach((name) => {
       $('#dropZone').addEventListener(name, (event) => {
         event.preventDefault();

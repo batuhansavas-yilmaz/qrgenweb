@@ -51,6 +51,23 @@ summary:focus-visible {
 
 .ic.wa { fill: currentColor; stroke: none; }
 
+.file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.file-label { width: 100%; min-height: 48px; cursor: pointer; }
+.file-label .ic, .file-label span { pointer-events: none; }
+.label-mobile { display: none; }
+
 .sprite {
   position: absolute;
   width: 0;
@@ -1238,6 +1255,9 @@ html[data-theme="dark"] .badge.green { background: rgba(47, 210, 127, .12); }
   .demo-section { display: none; }
   .home-view { display: flex; flex-direction: column; }
   .home-top { margin-top: auto; margin-bottom: auto; }
+  .drop-zone { display: none; }
+  .label-desktop { display: none; }
+  .label-mobile { display: inline; }
 }
 
 @media (max-width: 900px) and (max-height: 780px) {

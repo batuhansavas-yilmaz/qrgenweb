@@ -399,9 +399,11 @@
               <button id="stopCameraBtn" class="btn-soft" type="button" hidden>
                 <svg class="ic"><use href="#i-camera"></use></svg> Kamerayı Kapat
               </button>
-              <button id="scanFileBtn" class="btn-soft" type="button">
-                <svg class="ic"><use href="#i-image"></use></svg> Dosyadan oku
-              </button>
+              <label id="scanFileBtn" class="btn-soft file-label" for="scanFileInput">
+                <svg class="ic"><use href="#i-image"></use></svg>
+                <span class="label-desktop">Dosyadan oku</span>
+                <span class="label-mobile">Galeriden seç</span>
+              </label>
               <button id="scanPasteBtn" class="btn-soft" type="button">
                 <svg class="ic"><use href="#i-copy"></use></svg> Panodan yapıştır
               </button>
@@ -430,7 +432,7 @@
   </div>
 
   <div id="toasts" aria-live="polite"></div>
-  <input type="file" id="scanFileInput" accept="image/*" hidden>
+  <input type="file" id="scanFileInput" class="file-input" accept="image/*">
 
   <script src="vendor/qr-code-styling.js"></script>
   <script src="vendor/jsQR.js"></script>
