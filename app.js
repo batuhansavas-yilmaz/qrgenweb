@@ -121,7 +121,8 @@
     $('#backBtn').hidden = !meta.back;
     $('#brandBtn').hidden = !meta.brand;
     document.documentElement.dataset.view = name;
-    window.scrollTo({ top: 0, behavior: 'auto' });
+    const main = $('#main');
+    if (main) main.scrollTop = 0;
     if (name === 'generate') updatePreview();
     if (name === 'scan') resetScanUi();
   }

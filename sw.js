@@ -1,4 +1,4 @@
-const CACHE_NAME = 'qrgen-v9';
+const CACHE_NAME = 'qrgen-v10';
 const APP_SHELL = [
   './',
   './index.html',
@@ -13,6 +13,7 @@ const APP_SHELL = [
   './assets/icon-192.png',
   './assets/icon-512.png',
   './assets/icon-maskable-512.png',
+  './assets/icon-maskable.svg',
   './assets/apple-touch-icon.png',
   './assets/favicon-32.png',
   './assets/favicon-16.png',
