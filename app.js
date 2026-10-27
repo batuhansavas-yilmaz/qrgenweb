@@ -533,6 +533,7 @@
       video.srcObject = stream;
       video.hidden = false;
       await video.play();
+      updateMirrorMode();
       $('#cameraPlaceholder').hidden = true;
       $('#cameraOverlay').hidden = false;
       $('#startCameraBtn').hidden = true;
@@ -548,6 +549,17 @@
       state.cameraStarting = false;
       setLoading(false);
     }
+  }
+
+  function updateMirrorMode() {
+    const video = $('#scanVideo');
+    if (!video) return;
+    let facing = state.facingMode;
+    if (state.videoTrack && typeof state.videoTrack.getSettings === 'function') {
+      const settings = state.videoTrack.getSettings();
+      if (settings && settings.facingMode) facing = settings.facingMode;
+    }
+    video.classList.toggle('mirrored', facing === 'user');
   }
 
   function cameraErrorMessage(error) {
@@ -586,6 +598,7 @@
       video.pause();
       video.srcObject = null;
       video.hidden = true;
+      video.classList.remove('mirrored');
     }
     $('#cameraOverlay').hidden = true;
     $('#cameraPlaceholder').hidden = false;
