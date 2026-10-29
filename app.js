@@ -529,21 +529,28 @@
     return lines.join('\r\n') + '\r\n';
   }
 
-  function initScan() {
-    $('#startCameraBtn').addEventListener('click', startCamera);
-    let cameraPlaceholderScrollTop = 0;
-    $('#cameraPlaceholder').addEventListener('pointerdown', () => {
-      cameraPlaceholderScrollTop = $('#main').scrollTop;
+  function bindCameraAction(element, action) {
+    let savedScrollTop = 0;
+    element.addEventListener('pointerdown', () => {
+      savedScrollTop = $('#main').scrollTop;
     });
-    $('#cameraPlaceholder').addEventListener('mousedown', (event) => {
+    element.addEventListener('mousedown', (event) => {
       event.preventDefault();
     });
-    $('#cameraPlaceholder').addEventListener('click', () => {
-      startCamera();
-      requestAnimationFrame(() => {
-        $('#main').scrollTop = cameraPlaceholderScrollTop;
-      });
+    element.addEventListener('click', () => {
+      action();
+      const restore = () => {
+        $('#main').scrollTop = savedScrollTop;
+      };
+      requestAnimationFrame(restore);
+      setTimeout(restore, 120);
+      setTimeout(restore, 350);
     });
+  }
+
+  function initScan() {
+    bindCameraAction($('#startCameraBtn'), startCamera);
+    bindCameraAction($('#cameraPlaceholder'), startCamera);
     $('#cameraPlaceholder').addEventListener('keydown', (event) => {
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
