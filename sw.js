@@ -1,10 +1,11 @@
-const CACHE_NAME = 'qrgen-v12';
+﻿const CACHE_NAME = 'qrgen-v19';
 const APP_SHELL = [
   './',
   './index.html',
   './style.css',
   './design-system/theme.css',
   './app.js',
+  './i18n.js',
   './manifest.webmanifest',
   './vendor/qr-code-styling.js',
   './vendor/jsQR.js',

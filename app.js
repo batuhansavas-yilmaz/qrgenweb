@@ -1,6 +1,7 @@
 (function () {
   'use strict';
 
+  const t = (text) => window.I18N.t(text);
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
 
@@ -15,7 +16,7 @@
     'URL:' + DEMO_SITE,
     'END:VCARD'
   ].join('\r\n');
-  const WHATSAPP_TEXT = 'Merhaba, QR kodu ile ulaşıyorum.';
+  const WHATSAPP_TEXT = t('Merhaba, QR kodu ile ulaşıyorum.');
   const TYPE_LABELS = {
     url: 'Site',
     phone: 'Telefon',
@@ -33,6 +34,9 @@
     scan: { title: 'QR Tara', back: true, brand: false },
     result: { title: 'Sonuç', back: true, brand: false }
   };
+  const VIEW_DEPTH = { home: 0, generate: 1, scan: 1, result: 2 };
+  let firstView = true;
+  let viewTransitionId = 0;
 
   const state = {
     view: 'home',
@@ -64,6 +68,7 @@
 
   function init() {
     setupTheme();
+    initRipples();
     initNavigation();
     initQrCodes();
     initGenerate();
@@ -82,6 +87,56 @@
     apply();
     if (media.addEventListener) media.addEventListener('change', apply);
     else if (media.addListener) media.addListener(apply);
+  }
+
+  function initRipples() {
+    const selector = 'button, a.action-btn, a.btn-primary, a.btn-soft, a.quick-action, .demo-action, .chip, .rescan, .icon-btn, .cam-btn, .mini-link, .file-label, .bsy-btn, [role="button"]';
+    document.addEventListener('pointerdown', (event) => {
+      if (event.button && event.button !== 0) return;
+      const host = event.target.closest(selector);
+      if (!host || host.matches(':disabled, [aria-disabled="true"]')) return;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const rect = host.getBoundingClientRect();
+      const size = Math.max(rect.width, rect.height) * 2.4;
+      const ripple = document.createElement('span');
+      ripple.className = 'md-ripple';
+      ripple.style.width = ripple.style.height = size + 'px';
+      ripple.style.left = (event.clientX - rect.left - size / 2) + 'px';
+      ripple.style.top = (event.clientY - rect.top - size / 2) + 'px';
+      host.classList.add('md-ripple-host');
+      host.appendChild(ripple);
+      ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
+      setTimeout(() => ripple.remove(), 800);
+    }, { passive: true });
+  }
+
+  function animateAppbarTitle() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const title = $('#appbarTitle');
+    if (!title) return;
+    title.classList.remove('title-fade');
+    void title.offsetWidth;
+    title.classList.add('title-fade');
+    setTimeout(() => title.classList.remove('title-fade'), 400);
+  }
+
+  function playViewTransition(view, forward) {
+    if (!view || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    $$('.view').forEach((element) => element.classList.remove('view-push-in', 'view-pop-in'));
+    void view.offsetWidth;
+    const className = forward ? 'view-push-in' : 'view-pop-in';
+    view.classList.add(className);
+    const id = ++viewTransitionId;
+    const cleanup = () => {
+      if (id !== viewTransitionId) return;
+      view.classList.remove('view-push-in', 'view-pop-in');
+      view.removeEventListener('animationend', onEnd);
+    };
+    const onEnd = (event) => {
+      if (event.target === view) cleanup();
+    };
+    view.addEventListener('animationend', onEnd);
+    setTimeout(cleanup, 500);
   }
 
   function initNavigation() {
@@ -112,15 +167,23 @@
   function showView(name) {
     if (name === 'result' && !state.result) name = 'home';
     if (state.view === 'scan' && name !== 'scan') stopCamera();
+    const previous = state.view;
+    const animate = !firstView && previous !== name;
+    const forward = (VIEW_DEPTH[name] ?? 0) >= (VIEW_DEPTH[previous] ?? 0);
+    firstView = false;
     state.view = name;
     $$('.view').forEach((view) => {
       view.hidden = view.id !== name + 'View';
     });
     const meta = VIEW_META[name];
-    $('#appbarTitle').textContent = meta.title;
+    $('#appbarTitle').textContent = t(meta.title);
     $('#backBtn').hidden = !meta.back;
     $('#brandBtn').hidden = !meta.brand;
     document.documentElement.dataset.view = name;
+    if (animate) {
+      playViewTransition(document.getElementById(name + 'View'), forward);
+      animateAppbarTitle();
+    }
     const main = $('#main');
     if (main) main.scrollTop = 0;
     if (name === 'generate') updatePreview();
@@ -295,7 +358,7 @@
         return { valid: false, error: 'En az bir kişi bilgisi girin.' };
       }
       const data = buildVCardData({
-        name: name || 'QrGen Kişisi',
+        name: name || t('QrGen Kişisi'),
         phone,
         email: isEmail(email) ? email : '',
         org,
@@ -306,7 +369,7 @@
         valid: true,
         data,
         label: 'Kartvizit',
-        summary: [name || 'QrGen Kişisi', phone ? formatPhone(phone) : '', url ? 'site' : ''].filter(Boolean).join(' · ')
+        summary: [name || t('QrGen Kişisi'), phone ? formatPhone(phone) : '', url ? t('site') : ''].filter(Boolean).join(' · ')
       };
     }
     return { valid: false, error: 'İçerik türü seçin.' };
@@ -328,15 +391,15 @@
     const qrBox = $('#previewQr');
     const placeholder = $('#previewPlaceholder');
     const actionButtons = [$('#downloadPng'), $('#downloadSvg'), $('#copyQr'), $('#shareQr')];
-    $('#previewType').textContent = built.label || TYPE_LABELS[state.generateType] || 'QR';
+    $('#previewType').textContent = t(built.label || TYPE_LABELS[state.generateType] || 'QR');
     if (!built.valid) {
       state.generatedData = '';
       qrBox.hidden = true;
       placeholder.hidden = false;
-      $('#previewSummary').textContent = 'İçerik bekleniyor.';
+      $('#previewSummary').textContent = t('İçerik bekleniyor.');
       actionButtons.forEach((button) => { button.disabled = true; });
       if (!isActiveFormEmpty()) {
-        errorEl.textContent = built.error || 'İçerik girin.';
+        errorEl.textContent = t(built.error || 'İçerik girin.');
         errorEl.hidden = false;
       }
       return;
@@ -348,7 +411,7 @@
       state.generatedLabel = built.label;
       qrBox.hidden = false;
       placeholder.hidden = true;
-      $('#previewSummary').textContent = built.summary || built.label;
+      $('#previewSummary').textContent = built.summary || t(built.label);
       actionButtons.forEach((button) => { button.disabled = false; });
     } catch (error) {
       console.error(error);
@@ -356,7 +419,7 @@
       qrBox.hidden = true;
       placeholder.hidden = false;
       actionButtons.forEach((button) => { button.disabled = true; });
-      errorEl.textContent = 'Bu içerik için QR oluşturulamadı.';
+      errorEl.textContent = t('Bu içerik için QR oluşturulamadı.');
       errorEl.hidden = false;
     }
   }
@@ -444,7 +507,7 @@
       const blob = await state.previewQr.getRawData('png');
       const file = new File([blob], 'qrgen.png', { type: 'image/png' });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'QrGen', text: 'QR kodum' });
+        await navigator.share({ files: [file], title: 'QrGen', text: t('QR kodum') });
         return;
       }
       downloadBlob(blob, 'qrgen.png');
@@ -468,7 +531,19 @@
 
   function initScan() {
     $('#startCameraBtn').addEventListener('click', startCamera);
-    $('#cameraPlaceholder').addEventListener('click', startCamera);
+    let cameraPlaceholderScrollTop = 0;
+    $('#cameraPlaceholder').addEventListener('pointerdown', () => {
+      cameraPlaceholderScrollTop = $('#main').scrollTop;
+    });
+    $('#cameraPlaceholder').addEventListener('mousedown', (event) => {
+      event.preventDefault();
+    });
+    $('#cameraPlaceholder').addEventListener('click', () => {
+      startCamera();
+      requestAnimationFrame(() => {
+        $('#main').scrollTop = cameraPlaceholderScrollTop;
+      });
+    });
     $('#cameraPlaceholder').addEventListener('keydown', (event) => {
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
@@ -577,7 +652,7 @@
 
   function showCameraError(message) {
     const element = $('#cameraError');
-    element.textContent = message;
+    element.textContent = t(message);
     element.hidden = false;
   }
 
@@ -742,7 +817,7 @@
       state.torch = !state.torch;
       await state.videoTrack.applyConstraints({ advanced: [{ torch: state.torch }] });
       $('#flashBtn').classList.toggle('active', state.torch);
-      $('#flashBtn').setAttribute('aria-label', state.torch ? 'Flaşı kapat' : 'Flaşı aç');
+      $('#flashBtn').setAttribute('aria-label', t(state.torch ? 'Flaşı kapat' : 'Flaşı aç'));
     } catch (error) {
       state.torch = false;
       $('#flashBtn').classList.remove('active');
@@ -1081,14 +1156,14 @@
   }
 
   function renderResult(parsed) {
-    const label = TYPE_LABELS[parsed.type] || 'Metin';
+    const label = t(TYPE_LABELS[parsed.type] || 'Metin');
     const actionHtml = buildResultActions(parsed);
     const detailsHtml = buildResultDetails(parsed);
     $('#resultContent').innerHTML = `
       <div class="result-page">
         <div class="result-head">
           <div>
-            <span class="eyebrow">Tarama sonucu</span>
+            <span class="eyebrow">${t('Tarama sonucu')}</span>
             <h2>${escapeHtml(label)}</h2>
           </div>
           <span class="badge">${escapeHtml(label)}</span>
@@ -1097,16 +1172,16 @@
         ${actionHtml}
         <div class="result-card">
           <details class="raw-details">
-            <summary>Ham içerik</summary>
+            <summary>${t('Ham içerik')}</summary>
             <div class="raw-box">${escapeHtml(parsed.raw)}</div>
           </details>
           <div class="privacy-note">
             ${icon('lock')}
-            <span>Bu içerik cihazında işlendi. Hiçbir görsel veya metin sunucuya gönderilmedi.</span>
+            <span>${t('Bu içerik cihazında işlendi. Hiçbir görsel veya metin sunucuya gönderilmedi.')}</span>
           </div>
         </div>
         <button class="rescan" type="button" data-action="rescan">
-          ${icon('camera')} Yeniden tara
+          ${icon('camera')} ${t('Yeniden tara')}
         </button>
       </div>
     `;
@@ -1117,39 +1192,39 @@
       return siteCard('link', hostOf(parsed.url), parsed.url);
     }
     if (parsed.type === 'phone') {
-      return siteCard('phone', formatPhone(parsed.phone), 'Telefon numarası');
+      return siteCard('phone', formatPhone(parsed.phone), t('Telefon numarası'));
     }
     if (parsed.type === 'email') {
-      const rows = [row('E-posta', parsed.email)];
-      if (parsed.subject) rows.push(row('Konu', parsed.subject));
-      if (parsed.body) rows.push(row('Mesaj', parsed.body));
+      const rows = [row(t('E-posta'), parsed.email)];
+      if (parsed.subject) rows.push(row(t('Konu'), parsed.subject));
+      if (parsed.body) rows.push(row(t('Mesaj'), parsed.body));
       return `<div class="result-rows">${rows.join('')}</div>`;
     }
     if (parsed.type === 'sms') {
-      const rows = [row('Telefon', formatPhone(parsed.phone))];
-      if (parsed.smsBody) rows.push(row('Mesaj', parsed.smsBody));
+      const rows = [row(t('Telefon'), formatPhone(parsed.phone))];
+      if (parsed.smsBody) rows.push(row(t('Mesaj'), parsed.smsBody));
       return `<div class="result-rows">${rows.join('')}</div>`;
     }
     if (parsed.type === 'wifi') {
-      const rows = [row('Ağ', parsed.wifi.ssid)];
-      rows.push(row('Güvenlik', parsed.wifi.encryption === 'NOPASS' ? 'Şifresiz' : parsed.wifi.encryption));
-      if (parsed.wifi.password) rows.push(row('Şifre', parsed.wifi.password));
-      if (parsed.wifi.hidden) rows.push(row('Gizli ağ', 'Evet'));
+      const rows = [row(t('Ağ'), parsed.wifi.ssid)];
+      rows.push(row(t('Güvenlik'), parsed.wifi.encryption === 'NOPASS' ? t('Şifresiz') : parsed.wifi.encryption));
+      if (parsed.wifi.password) rows.push(row(t('Şifre'), parsed.wifi.password));
+      if (parsed.wifi.hidden) rows.push(row(t('Gizli ağ'), t('Evet')));
       return `<div class="result-rows">${rows.join('')}</div>`;
     }
     if (parsed.type === 'geo') {
-      return `<div class="result-rows">${row('Konum', parsed.geo)}</div>`;
+      return `<div class="result-rows">${row(t('Konum'), parsed.geo)}</div>`;
     }
     if (parsed.type === 'text') {
-      return `<div class="result-rows">${row('İçerik', parsed.raw)}</div>`;
+      return `<div class="result-rows">${row(t('İçerik'), parsed.raw)}</div>`;
     }
     const rows = [];
-    if (parsed.name) rows.push(row('Ad', parsed.name));
-    if (parsed.org) rows.push(row('Şirket', parsed.org));
-    if (parsed.title) rows.push(row('Ünvan', parsed.title));
-    if (parsed.phone) rows.push(row('Telefon', formatPhone(parsed.phone)));
-    if (parsed.email) rows.push(row('E-posta', parsed.email));
-    if (parsed.url) rows.push(row('Site', parsed.url));
+    if (parsed.name) rows.push(row(t('Ad'), parsed.name));
+    if (parsed.org) rows.push(row(t('Şirket'), parsed.org));
+    if (parsed.title) rows.push(row(t('Ünvan'), parsed.title));
+    if (parsed.phone) rows.push(row(t('Telefon'), formatPhone(parsed.phone)));
+    if (parsed.email) rows.push(row(t('E-posta'), parsed.email));
+    if (parsed.url) rows.push(row(t('Site'), parsed.url));
     return `<div class="result-rows">${rows.join('')}</div>`;
   }
 
@@ -1172,29 +1247,29 @@
   function buildResultActions(parsed) {
     const parts = [];
     if (parsed.url) {
-      parts.push(`<a class="btn-primary btn-full" href="${escapeAttr(parsed.url)}" target="_blank" rel="noopener noreferrer">${icon('external')} Siteyi aç</a>`);
+      parts.push(`<a class="btn-primary btn-full" href="${escapeAttr(parsed.url)}" target="_blank" rel="noopener noreferrer">${icon('external')} ${t('Siteyi aç')}</a>`);
     }
     if (parsed.phone) {
       parts.push(`
         <div class="quick-grid">
-          <a class="quick-action primary" href="${escapeAttr('tel:' + parsed.phone)}">${icon('phone')}<strong>Ara</strong></a>
-          <a class="quick-action" href="${escapeAttr('sms:' + parsed.phone)}">${icon('message')}<strong>SMS at</strong></a>
+          <a class="quick-action primary" href="${escapeAttr('tel:' + parsed.phone)}">${icon('phone')}<strong>${t('Ara')}</strong></a>
+          <a class="quick-action" href="${escapeAttr('sms:' + parsed.phone)}">${icon('message')}<strong>${t('SMS at')}</strong></a>
           <a class="quick-action wa wide" href="${escapeAttr(waLink(parsed.phone))}" target="_blank" rel="noopener noreferrer">${iconWhatsApp()}<strong>WhatsApp</strong></a>
         </div>
       `);
     }
     if (parsed.email) {
-      parts.push(`<a class="btn-soft btn-full" href="mailto:${escapeAttr(parsed.email)}">${icon('mail')} E-posta gönder</a>`);
+      parts.push(`<a class="btn-soft btn-full" href="mailto:${escapeAttr(parsed.email)}">${icon('mail')} ${t('E-posta gönder')}</a>`);
     }
     if (parsed.type === 'wifi') {
       if (parsed.wifi.password) {
-        parts.push(`<button class="btn-soft btn-full" type="button" data-action="copy-wifi">${icon('copy')} Şifreyi kopyala</button>`);
+        parts.push(`<button class="btn-soft btn-full" type="button" data-action="copy-wifi">${icon('copy')} ${t('Şifreyi kopyala')}</button>`);
       }
     }
     parts.push(`
       <div class="btn-row">
-        <button class="btn-soft" type="button" data-action="copy">${icon('copy')} Kopyala</button>
-        <button class="btn-soft" type="button" data-action="share">${icon('share')} Paylaş</button>
+        <button class="btn-soft" type="button" data-action="copy">${icon('copy')} ${t('Kopyala')}</button>
+        <button class="btn-soft" type="button" data-action="share">${icon('share')} ${t('Paylaş')}</button>
       </div>
     `);
     return parts.join('');
@@ -1385,7 +1460,7 @@
     const container = $('#toasts');
     const toast = document.createElement('div');
     toast.className = 'toast';
-    toast.textContent = message;
+    toast.textContent = t(message);
     container.appendChild(toast);
     requestAnimationFrame(() => toast.classList.add('show'));
     setTimeout(() => {
