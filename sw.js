@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = 'qrgen-v20';
+﻿const CACHE_NAME = 'qrgen-v21';
 const APP_SHELL = [
   './',
   './index.html',

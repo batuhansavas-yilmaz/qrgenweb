@@ -1463,6 +1463,10 @@ html[data-theme="light"] .camera-placeholder p { color: var(--text-2); }
   overflow: hidden !important;
 }
 
+.camera-placeholder.md-ripple-host {
+  position: absolute !important;
+}
+
 .md-ripple {
   position: absolute;
   z-index: 2;

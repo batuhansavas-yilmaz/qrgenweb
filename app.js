@@ -90,7 +90,7 @@
   }
 
   function initRipples() {
-    const selector = 'button, a.action-btn, a.btn-primary, a.btn-soft, a.quick-action, .demo-action, .chip, .rescan, .icon-btn, .cam-btn, .mini-link, .file-label, .bsy-btn, [role="button"]';
+    const selector = 'button, a.action-btn, a.btn-primary, a.btn-soft, a.quick-action, .demo-action, .chip, .rescan, .icon-btn, .cam-btn, .mini-link, .file-label, .bsy-btn';
     document.addEventListener('pointerdown', (event) => {
       if (event.button && event.button !== 0) return;
       const host = event.target.closest(selector);
