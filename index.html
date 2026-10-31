@@ -22,7 +22,7 @@
       document.documentElement.dataset.theme = dark ? 'dark' : 'light';
     })();
   </script>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=25">
 </head>
 <body>
   <svg class="sprite" aria-hidden="true" focusable="false">
@@ -390,7 +390,6 @@
             <div class="scan-copy">
               <h2>Tara</h2>
             </div>
-            <p class="scan-caption scan-caption-mobile">QR kodunu çerçeveye hizala · netleşmesi için dokun</p>
             <div class="scan-actions">
               <button id="startCameraBtn" class="btn-primary" type="button">
                 <svg class="ic"><use href="#i-camera"></use></svg> Kamerayı Aç
@@ -411,7 +410,6 @@
               <svg class="ic"><use href="#i-image"></use></svg>
               <span>Görseli buraya bırak</span>
             </div>
-            <p class="scan-note">Görseli sürükle-bırak veya dosyadan seç. Flaş ve zoom, cihaz destekliyorsa etkinleşir.</p>
           </div>
         </div>
       </section>
@@ -444,9 +442,20 @@
   <div id="toasts" aria-live="polite"></div>
   <input type="file" id="scanFileInput" class="file-input" accept="image/*">
 
+  <script>
+    (() => {
+      if (!('serviceWorker' in navigator)) return;
+      let reloading = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (reloading) return;
+        reloading = true;
+        location.reload();
+      });
+    })();
+  </script>
   <script src="vendor/qr-code-styling.js"></script>
   <script src="vendor/jsQR.js"></script>
-  <script src="i18n.js"></script>
-  <script src="app.js"></script>
+  <script src="i18n.js?v=25"></script>
+  <script src="app.js?v=25"></script>
 </body>
 </html>

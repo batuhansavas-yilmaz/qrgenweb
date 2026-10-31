@@ -77,7 +77,7 @@
     setupBarcodeDetector();
     initScan();
     initResult();
-    routeInitial();
+    showInitialView();
     registerServiceWorker();
   }
 
@@ -151,8 +151,12 @@
       ripple.style.top = (event.clientY - rect.top - size / 2) + 'px';
       host.classList.add('md-ripple-host');
       host.appendChild(ripple);
-      ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
-      setTimeout(() => ripple.remove(), 800);
+      const cleanup = () => ripple.remove();
+      ripple.addEventListener('animationend', cleanup, { once: true });
+      ['pointercancel', 'pointerleave'].forEach((type) => {
+        host.addEventListener(type, cleanup, { once: true });
+      });
+      setTimeout(cleanup, 800);
     }, { passive: true });
   }
 
@@ -192,22 +196,20 @@
     });
     $('#goGenerate').addEventListener('click', () => navigate('generate'));
     $('#goScan').addEventListener('click', () => navigate('scan'));
-    window.addEventListener('hashchange', handleRoute);
   }
 
   function navigate(name) {
-    if (location.hash === '#' + name) showView(name);
-    else location.hash = name;
+    showView(name);
   }
 
-  function handleRoute() {
-    const name = location.hash.replace('#', '') || 'home';
-    showView(VIEW_META[name] ? name : 'home');
-  }
-
-  function routeInitial() {
-    const name = location.hash.replace('#', '');
-    showView(VIEW_META[name] ? name : 'home');
+  function showInitialView() {
+    const legacy = location.hash.replace(/^#\/?/, '');
+    const name = VIEW_META[legacy] ? legacy : 'home';
+    showView(name);
+    if (!location.hash) return;
+    try {
+      history.replaceState(null, '', location.pathname + location.search);
+    } catch (error) {}
   }
 
   function showView(name) {
@@ -1618,7 +1620,9 @@
 
   function registerServiceWorker() {
     if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
-      navigator.serviceWorker.register('sw.js').catch(() => {});
+      navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+        .then((registration) => registration.update())
+        .catch(() => {});
     }
     if (navigator.storage && navigator.storage.persist) {
       navigator.storage.persist().catch(() => {});

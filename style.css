@@ -511,8 +511,26 @@ html[data-theme="dark"] .badge.green { background: rgba(47, 210, 127, .12); }
   align-items: start;
 }
 
+.generate-layout > * { min-width: 0; }
+
 .generate-form { padding: 16px; }
 .preview-panel { position: sticky; top: 76px; padding: 16px; }
+
+.type-chips,
+.custom-row,
+.form-actions,
+.logo-row { min-width: 0; }
+
+.logo-row input[type="file"] { min-width: 0; max-width: 100%; }
+
+.preview-qr canvas,
+.preview-qr svg {
+  display: block;
+  width: 100% !important;
+  max-width: 100%;
+  height: auto !important;
+  aspect-ratio: 1;
+}
 
 .type-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 15px; }
 
@@ -1388,7 +1406,7 @@ html[data-theme="light"] .camera-placeholder p { color: var(--text-2); }
   .result-label { flex-basis: 66px; }
 }
 
-@media (max-width: 700px) {
+@media (max-width: 700px), (pointer: coarse) and (max-width: 1024px) {
   #scanView {
     display: flex;
     flex-direction: column;
@@ -1453,6 +1471,37 @@ html[data-theme="light"] .camera-placeholder p { color: var(--text-2); }
   .scan-actions .file-label .ic { color: #fff; }
   .scan-note { max-width: 92%; margin: 0 auto; text-align: center; font-size: 9px; }
   html[data-view="scan"] .app-footer { display: none; }
+
+  html[data-view="generate"] #generateView {
+    padding: 8px 10px calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+  html[data-view="generate"] #generateView .view-head { display: none; }
+  html[data-view="generate"] .app-footer { display: none; }
+  html[data-view="generate"] .generate-layout { gap: 10px; }
+  html[data-view="generate"] .generate-form,
+  html[data-view="generate"] .preview-panel {
+    width: 100%;
+    padding: 14px;
+  }
+  html[data-view="generate"] .type-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin-bottom: 12px;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  html[data-view="generate"] .type-chips::-webkit-scrollbar { display: none; }
+  html[data-view="generate"] .chip { flex: 0 0 auto; }
+  html[data-view="generate"] .custom-row {
+    gap: 10px;
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+  html[data-view="generate"] .custom-field { min-width: 0; }
+  html[data-view="generate"] .form-actions { gap: 6px; margin-top: 12px; }
+  html[data-view="generate"] .preview-stage { min-height: 220px; }
+  html[data-view="generate"] .preview-qr { width: min(260px, 100%); }
 }
 
 /* Material-style press ripple */
