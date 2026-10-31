@@ -59,7 +59,8 @@
     barcodeDetector: null,
     barcodeDetectorChecked: false,
     result: null,
-    detected: false
+    detected: false,
+    pasteBusy: false
   };
 
   const debouncedUpdatePreview = debounce(updatePreview, 140);
@@ -68,6 +69,7 @@
 
   function init() {
     setupTheme();
+    initMobileShell();
     initRipples();
     initNavigation();
     initQrCodes();
@@ -77,6 +79,50 @@
     initResult();
     routeInitial();
     registerServiceWorker();
+  }
+
+  function initMobileShell() {
+    if (!window.matchMedia || !window.matchMedia('(pointer: coarse)').matches) return;
+    const editableSelector = 'input, textarea, select, [contenteditable="true"], .selectable';
+    const pinchSelector = '.cropper-container';
+    const isEditable = (target) => target instanceof Element && target.closest(editableSelector);
+    const isPinchAllowed = (target) => target instanceof Element && target.closest(pinchSelector);
+
+    const stopGesture = (event) => {
+      if (!isPinchAllowed(event.target)) event.preventDefault();
+    };
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach((type) => {
+      document.addEventListener(type, stopGesture, { passive: false });
+    });
+
+    document.addEventListener('touchmove', (event) => {
+      if (event.touches.length > 1 && !isPinchAllowed(event.target)) event.preventDefault();
+    }, { passive: false });
+
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', (event) => {
+      if (event.touches.length > 0 || isPinchAllowed(event.target)) return;
+      const interactive = event.target instanceof Element && event.target.closest('button, a, label, input, textarea, select, [role="button"], [contenteditable="true"], .selectable');
+      if (interactive) return;
+      const now = Date.now();
+      if (now - lastTouchEnd < 320) event.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
+
+    document.addEventListener('contextmenu', (event) => {
+      if (isEditable(event.target)) return;
+      event.preventDefault();
+    });
+
+    document.addEventListener('selectstart', (event) => {
+      if (isEditable(event.target)) return;
+      event.preventDefault();
+    });
+
+    document.addEventListener('dragstart', (event) => {
+      if (isEditable(event.target)) return;
+      event.preventDefault();
+    });
   }
 
   function setupTheme() {
@@ -567,6 +613,12 @@
       event.target.value = '';
     });
     $('#scanPasteBtn').addEventListener('click', pasteFromClipboard);
+    $('#pasteCloseBtn').addEventListener('click', closePasteSheet);
+    $('[data-paste-close]').addEventListener('click', closePasteSheet);
+    $('#pasteCapture').addEventListener('paste', handleSheetPaste);
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !$('#pasteSheet').hidden) closePasteSheet();
+    });
     $('#flashBtn').addEventListener('click', toggleTorch);
     $('#flipBtn').addEventListener('click', flipCamera);
     $('#zoomRange').addEventListener('input', applyZoom);
@@ -951,33 +1003,116 @@
   }
 
   async function pasteFromClipboard() {
-    if (!navigator.clipboard || !navigator.clipboard.read) {
-      showToast('Panoya erişilemiyor; Ctrl+V deneyin.');
-      return;
-    }
+    if (state.pasteBusy) return;
+    state.pasteBusy = true;
     try {
-      const items = await navigator.clipboard.read();
-      for (const item of items) {
-        const type = item.types.find((value) => value.startsWith('image/'));
-        if (type) {
-          const blob = await item.getType(type);
-          await handleScanFile(new File([blob], 'pano.png', { type }));
+      if (navigator.clipboard && navigator.clipboard.read) {
+        try {
+          const items = await navigator.clipboard.read();
+          if (await handleClipboardItems(items)) return;
+          openPasteSheet('Panoda görsel veya metin bulunamadı. Panodaki içeriği aşağıdaki alana yapıştırın.');
+          return;
+        } catch (error) {
+          openPasteSheet();
           return;
         }
       }
-      showToast('Panoda görsel yok.');
-    } catch (error) {
-      showToast('Panoya erişilemiyor; Ctrl+V deneyin.');
+      openPasteSheet();
+    } finally {
+      state.pasteBusy = false;
     }
+  }
+
+  async function handleClipboardItems(items) {
+    if (!items || !items.length) return false;
+    for (const item of items) {
+      if (!item || !item.types) continue;
+      const type = item.types.find((value) => value.startsWith('image/'));
+      if (type) {
+        const blob = await item.getType(type);
+        await handleScanFile(new File([blob], 'pano.png', { type }));
+        return true;
+      }
+    }
+    for (const item of items) {
+      if (!item || !item.types || !item.types.includes('text/plain')) continue;
+      const blob = await item.getType('text/plain');
+      const text = await blob.text();
+      if (text.trim()) {
+        onScanSuccess(text.trim());
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function openPasteSheet(message) {
+    const sheet = $('#pasteSheet');
+    if (!sheet) return;
+    const hint = $('#pasteSheetHint');
+    if (hint) hint.textContent = t(message || 'Panodaki QR görselini veya metnini bu alana yapıştırın.');
+    sheet.hidden = false;
+    document.documentElement.dataset.pasteSheet = 'open';
+    const capture = $('#pasteCapture');
+    if (capture) {
+      capture.value = '';
+      setTimeout(() => {
+        try {
+          capture.focus({ preventScroll: true });
+        } catch (error) {
+          capture.focus();
+        }
+      }, 60);
+    }
+  }
+
+  function closePasteSheet() {
+    const sheet = $('#pasteSheet');
+    if (!sheet || sheet.hidden) return;
+    sheet.hidden = true;
+    delete document.documentElement.dataset.pasteSheet;
+    const capture = $('#pasteCapture');
+    if (capture) capture.blur();
+  }
+
+  async function handleSheetPaste(event) {
+    event.preventDefault();
+    const data = event.clipboardData;
+    if (!data) return;
+    for (const item of Array.from(data.items || [])) {
+      if (item.kind === 'file' && item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) {
+          closePasteSheet();
+          await handleScanFile(file);
+          return;
+        }
+      }
+    }
+    const file = data.files && data.files[0];
+    if (file && file.type.startsWith('image/')) {
+      closePasteSheet();
+      await handleScanFile(file);
+      return;
+    }
+    const text = data.getData('text/plain');
+    if (text && text.trim()) {
+      closePasteSheet();
+      onScanSuccess(text.trim());
+      return;
+    }
+    const hint = $('#pasteSheetHint');
+    if (hint) hint.textContent = t('Panoda görsel veya metin bulunamadı.');
   }
 
   function handlePaste(event) {
     if (state.view !== 'scan') return;
+    if (!$('#pasteSheet').hidden) return;
     const target = event.target;
-    if (target && target.closest && target.closest('input, textarea')) return;
-    const items = event.clipboardData && event.clipboardData.items;
-    if (!items) return;
-    for (const item of items) {
+    if (target && target.closest && target.closest('input, textarea, [contenteditable="true"]')) return;
+    const data = event.clipboardData;
+    if (!data) return;
+    for (const item of Array.from(data.items || [])) {
       if (item.type.startsWith('image/')) {
         const file = item.getAsFile();
         if (file) {
@@ -986,6 +1121,11 @@
           return;
         }
       }
+    }
+    const text = data.getData('text/plain');
+    if (text && text.trim()) {
+      event.preventDefault();
+      onScanSuccess(text.trim());
     }
   }
 

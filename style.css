@@ -1517,3 +1517,144 @@ html[data-theme="light"] .camera-placeholder p { color: var(--text-2); }
   .md-ripple { display: none; }
   .view.view-push-in, .view.view-pop-in, #appbarTitle.title-fade { animation: none; }
 }
+
+/* Mobile app behavior */
+
+@media (pointer: coarse) {
+  html,
+  body {
+    touch-action: pan-x pan-y;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body,
+  body * {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  input,
+  textarea,
+  select,
+  [contenteditable="true"],
+  .selectable,
+  .selectable *,
+  #resultContent,
+  #resultContent * {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+  }
+
+  input,
+  textarea,
+  select {
+    font-size: max(16px, 1em) !important;
+  }
+
+  input[type="range"] {
+    touch-action: none;
+  }
+
+  img,
+  svg {
+    -webkit-user-drag: none;
+    user-drag: none;
+  }
+}
+
+/* Clipboard paste sheet */
+
+.paste-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.paste-sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 14, 28, .48);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+.paste-sheet-card {
+  position: relative;
+  width: min(100%, 480px);
+  padding: 10px 18px calc(18px + env(safe-area-inset-bottom, 0px));
+  background: var(--surface);
+  color: var(--txt);
+  border-radius: 22px 22px 0 0;
+  box-shadow: var(--shadow-soft);
+  animation: paste-sheet-in .24s cubic-bezier(.32, .72, 0, 1) both;
+}
+
+.paste-sheet-handle {
+  width: 42px;
+  height: 4px;
+  margin: 0 auto 14px;
+  border-radius: 99px;
+  background: var(--border-2);
+}
+
+.paste-sheet-card h2 {
+  font-size: 18px;
+  letter-spacing: -.02em;
+}
+
+.paste-sheet-hint {
+  margin: 6px 0 12px;
+  color: var(--text-2);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.paste-capture {
+  width: 100%;
+  min-height: 84px;
+  resize: none;
+  padding: 12px 13px;
+  border: 1px solid var(--border-2);
+  border-radius: 14px;
+  background: var(--surface-2);
+  color: var(--txt);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.paste-capture:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+.paste-sheet-close {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 12px;
+  justify-content: center;
+}
+
+@keyframes paste-sheet-in {
+  from { transform: translate3d(0, 100%, 0); }
+  to { transform: translate3d(0, 0, 0); }
+}
+
+@media (min-width: 720px) {
+  .paste-sheet {
+    align-items: center;
+    padding: 24px;
+  }
+
+  .paste-sheet-card {
+    padding: 18px;
+    border-radius: 22px;
+  }
+}

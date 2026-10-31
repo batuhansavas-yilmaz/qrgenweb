@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>QrGen — QR Oluştur ve Tara</title>
   <meta name="description" content="QrGen — QR kod oluştur, kamerayla veya görselden tara. Tamamen tarayıcıda, reklamsız ve ücretsiz.">
   <meta name="color-scheme" content="light dark">
@@ -427,6 +427,17 @@
   <div class="overlay blur" id="loadingOverlay" hidden>
     <div class="loading-card" role="status" aria-label="İşleniyor">
       <div class="spinner"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+    </div>
+  </div>
+
+  <div class="paste-sheet" id="pasteSheet" hidden>
+    <div class="paste-sheet-backdrop" data-paste-close></div>
+    <div class="paste-sheet-card" role="dialog" aria-modal="true" aria-labelledby="pasteSheetTitle">
+      <div class="paste-sheet-handle" aria-hidden="true"></div>
+      <h2 id="pasteSheetTitle">Panodan yapıştır</h2>
+      <p class="paste-sheet-hint" id="pasteSheetHint">Panodaki QR görselini veya metnini bu alana yapıştırın.</p>
+      <textarea id="pasteCapture" class="paste-capture" rows="3" inputmode="none" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Buraya dokunup basılı tutun, ardından Yapıştır'a dokunun" aria-label="Panodan yapıştırma alanı"></textarea>
+      <button id="pasteCloseBtn" class="btn-soft paste-sheet-close" type="button">Kapat</button>
     </div>
   </div>
 
