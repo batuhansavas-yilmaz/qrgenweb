@@ -1436,10 +1436,9 @@ html[data-theme="light"] .camera-placeholder p { color: var(--text-2); }
     line-height: 1.4;
     text-align: center;
   }
-  .scan-actions { grid-template-columns: 1fr 1fr; gap: 8px; }
-  #startCameraBtn, #stopCameraBtn { display: none !important; }
-  .scan-actions .file-label,
-  .scan-actions #scanPasteBtn {
+  .scan-actions { grid-template-columns: 1fr; gap: 8px; }
+  #startCameraBtn, #stopCameraBtn, #scanPasteBtn { display: none !important; }
+  .scan-actions .file-label {
     min-height: 52px;
     border-radius: 14px;
     font-size: 12px;
