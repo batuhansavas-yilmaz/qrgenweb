@@ -1615,6 +1615,11 @@ html[data-theme="light"] .camera-placeholder p { color: var(--text-2); }
   line-height: 1.5;
 }
 
+.paste-sheet-hint.is-warning {
+  color: var(--red);
+  font-weight: 600;
+}
+
 .paste-capture {
   width: 100%;
   min-height: 84px;

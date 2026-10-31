@@ -1010,7 +1010,7 @@
         try {
           const items = await navigator.clipboard.read();
           if (await handleClipboardItems(items)) return;
-          openPasteSheet('Panoda görsel veya metin bulunamadı. Panodaki içeriği aşağıdaki alana yapıştırın.');
+          showToast('Panoda görsel yok.');
           return;
         } catch (error) {
           openPasteSheet();
@@ -1034,23 +1034,17 @@
         return true;
       }
     }
-    for (const item of items) {
-      if (!item || !item.types || !item.types.includes('text/plain')) continue;
-      const blob = await item.getType('text/plain');
-      const text = await blob.text();
-      if (text.trim()) {
-        onScanSuccess(text.trim());
-        return true;
-      }
-    }
     return false;
   }
 
-  function openPasteSheet(message) {
+  function openPasteSheet() {
     const sheet = $('#pasteSheet');
     if (!sheet) return;
     const hint = $('#pasteSheetHint');
-    if (hint) hint.textContent = t(message || 'Panodaki QR görselini veya metnini bu alana yapıştırın.');
+    if (hint) {
+      hint.textContent = t('Panodaki QR görselini bu alana yapıştırın.');
+      hint.classList.remove('is-warning');
+    }
     sheet.hidden = false;
     document.documentElement.dataset.pasteSheet = 'open';
     const capture = $('#pasteCapture');
@@ -1095,14 +1089,11 @@
       await handleScanFile(file);
       return;
     }
-    const text = data.getData('text/plain');
-    if (text && text.trim()) {
-      closePasteSheet();
-      onScanSuccess(text.trim());
-      return;
-    }
     const hint = $('#pasteSheetHint');
-    if (hint) hint.textContent = t('Panoda görsel veya metin bulunamadı.');
+    if (hint) {
+      hint.textContent = t('Panoda görsel yok.');
+      hint.classList.add('is-warning');
+    }
   }
 
   function handlePaste(event) {
@@ -1125,7 +1116,7 @@
     const text = data.getData('text/plain');
     if (text && text.trim()) {
       event.preventDefault();
-      onScanSuccess(text.trim());
+      showToast('Panoda görsel yok.');
     }
   }
 
